@@ -436,39 +436,10 @@ renderSettings=function(){const c=state.company||{};app.innerHTML=`<section clas
  $('#coSave').onclick=()=>{state.company={...state.company,name:$('#coName').value.trim(),commercialName:$('#coCommercial').value.trim(),taxId:$('#coTax').value.trim(),address:$('#coAddress').value.trim(),postalCode:$('#coPostal').value.trim(),province:$('#coProvince').value.trim(),phone:$('#coPhone').value.trim(),email:$('#coEmail').value.trim(),registration:$('#coReg').value.trim(),directorName:$('#coDirectorName').value.trim(),directorSurname:$('#coDirectorSurname').value.trim(),directorSignature:pendingDirectorSignature,seal:pendingSeal,logo:pendingLogo};state.numbering={...(state.numbering||{}),serviceNext:Math.max(1,Math.trunc(Number($('#serviceNext').value)||26001))};save();toast('Empresa, sello y firma guardados')};$('#coBack').onclick=renderDashboard;$('#exportBtn').onclick=exportData;$('#importFile').onchange=importData;$('#legacyImportBtn').onclick=()=>{localStorage.removeItem('mhs_legacy_recovery_v503');runLegacyMigration()};
 }
 function openServiceDocument(s){const r=s.data.documentReceipt=s.data.documentReceipt||{},kind=r.kind||'Hoja PDF';app.innerHTML=`<div class="toolbar"><button class="btn secondary" id="docBack">← Volver a hoja</button><button class="btn" id="docSave">Guardar documento</button><button class="btn blue" id="docPrint">Imprimir / PDF</button><button class="btn secondary" id="docShare">Compartir</button><button class="btn red" id="docDelete">Eliminar documento</button></div><div class="sheet"><div class="sheet-title"><div><h1>Hoja PDF / Albarán</h1><small>${esc(typeMeta[s.type].name)} · ${esc(s.number||'')}</small></div></div><div class="sheet-body"><section class="section"><h3>Tipo de documento</h3><div class="inner"><div class="grid">${select('docKind','Generar como',['Hoja PDF','Albarán'],kind)}${field('docNo','N.º documento',r.number||(kind==='Albarán'?serviceDocNo(s,'ALB'):serviceDocNo(s,'HS')),'text','readonly class=\"readonly\"')}${field('docDate','Fecha',r.date||s.date||nowDate(),'date')}${field('docNotes','Observaciones del documento',r.notes||'')}</div><div class="notice">La misma hoja sirve como PDF técnico o como albarán. Si eliges <b>Albarán</b>, la firma de recepción es obligatoria.</div></div></section><section class="section" id="receiptSection"><h3>Recepción · obligatoria para Albarán</h3><div class="inner"><div class="grid three">${field('docReceiver','Nombre de quien recibe',r.receiver||'')}${field('docRole','Empresa / función',r.receiverRole||'')}${field('docSignDate','Fecha / hora recepción',r.signDate||new Date().toLocaleString('es-ES'))}${field('docCarrier','Transportista / empresa (opcional)',r.carrier||'')}${field('docPlate','Matrícula (opcional)',r.plate||'')}</div><div class="field full"><label>Firma de recepción</label><canvas id="docSignature" width="700" height="220" class="signature-canvas"></canvas><div class="signature-actions"><button type="button" class="btn secondary" id="clearDocSignature">Borrar firma</button></div></div></div></section></div></div>`;
- $('#docBack').onclick=renderService;setupDocSignature(s);const show=()=>$('#receiptSection').classList.toggle('is-optional',$('#docKind').value!=='Albarán');$('#docKind').onchange=()=>{show();$('#docNo').value=$('#docKind').value==='Albarán'?serviceDocNo(s,'ALB'):serviceDocNo(s,'HS')};show();$('#docSave').onclick=()=>{if(collectServiceDocument(s,false)){toast('Documento guardado')}};$('#docPrint').onclick=()=>{try{if(collectServiceDocument(s,true))printServiceDocument(s)}catch(e){console.error('Error al preparar documento PDF',e);alert('No se pudo preparar el documento: '+(e?.message||e))}};$('#docShare').onclick=()=>{if(!collectServiceDocument(s,false))return;const r=s.data.documentReceipt||{};shareDocument({title:r.kind==='Albarán'?'Hoja de servicio / Albarán':'Hoja de servicio',text:`${r.kind} ${r.number||s.number} · ${s.client?.name||''} · ${typeMeta[s.type]?.name||s.type}`,filename:`${(r.number||s.number||'documento').replaceAll(' ','_')}.txt`})};$('#docDelete').onclick=()=>{const r=s.data.documentReceipt||{};if(!r.number&&!r.signature&&!r.notes&&!r.receiver){alert('No hay un documento guardado que eliminar.');return}if(!confirm(`¿Eliminar ${r.kind||'el documento'} ${r.number||''}? La hoja de servicio no se borrará.`))return;delete s.data.documentReceipt;s.updatedAt=new Date().toISOString();save();toast('Documento eliminado');renderService()};
+ $('#docBack').onclick=renderService;setupDocSignature(s);const show=()=>$('#receiptSection').classList.toggle('is-optional',$('#docKind').value!=='Albarán');$('#docKind').onchange=()=>{show();$('#docNo').value=$('#docKind').value==='Albarán'?serviceDocNo(s,'ALB'):serviceDocNo(s,'HS')};show();$('#docSave').onclick=()=>{if(collectServiceDocument(s,false)){toast('Documento guardado')}};$('#docPrint').onclick=()=>{if(collectServiceDocument(s,true))printServiceDocument(s)};$('#docShare').onclick=()=>{if(!collectServiceDocument(s,false))return;const r=s.data.documentReceipt||{};shareDocument({title:r.kind==='Albarán'?'Hoja de servicio / Albarán':'Hoja de servicio',text:`${r.kind} ${r.number||s.number} · ${s.client?.name||''} · ${typeMeta[s.type]?.name||s.type}`,filename:`${(r.number||s.number||'documento').replaceAll(' ','_')}.txt`})};$('#docDelete').onclick=()=>{const r=s.data.documentReceipt||{};if(!r.number&&!r.signature&&!r.notes&&!r.receiver){alert('No hay un documento guardado que eliminar.');return}if(!confirm(`¿Eliminar ${r.kind||'el documento'} ${r.number||''}? La hoja de servicio no se borrará.`))return;delete s.data.documentReceipt;s.updatedAt=new Date().toISOString();save();toast('Documento eliminado');renderService()};
 }
 function setupDocSignature(s){const r=s.data.documentReceipt=s.data.documentReceipt||{},canvas=$('#docSignature'),ctx=canvas.getContext('2d');ctx.lineWidth=3;ctx.lineCap='round';ctx.strokeStyle='#203129';let drawing=false,hasInk=false;const pos=e=>{const x=canvas.getBoundingClientRect(),p=e;return{x:(p.clientX-x.left)*canvas.width/x.width,y:(p.clientY-x.top)*canvas.height/x.height}};canvas.onpointerdown=e=>{drawing=true;const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);e.preventDefault()};canvas.onpointermove=e=>{if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();hasInk=true;e.preventDefault()};window.addEventListener('pointerup',()=>drawing=false);if(r.signature){const im=new Image();im.onload=()=>{ctx.drawImage(im,0,0,canvas.width,canvas.height);hasInk=true};im.src=r.signature}$('#clearDocSignature').onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);hasInk=false;r.signature=''};canvas._hasInk=()=>hasInk;canvas._data=()=>canvas.toDataURL('image/png')}
 function collectServiceDocument(s,forPrint=false){const r=s.data.documentReceipt=s.data.documentReceipt||{},canvas=$('#docSignature');r.kind=$('#docKind').value;r.number=$('#docNo').value.trim();r.date=$('#docDate').value;r.notes=$('#docNotes').value.trim();r.receiver=$('#docReceiver').value.trim();r.receiverRole=$('#docRole').value.trim();r.signDate=$('#docSignDate').value.trim();r.carrier=$('#docCarrier').value.trim();r.plate=$('#docPlate').value.trim();if(canvas?._hasInk?.())r.signature=canvas._data();if(r.kind==='Albarán'&&(!r.receiver||!r.signDate||!r.signature)){alert('Para generar un Albarán debes indicar quién recibe, fecha/hora y firma de recepción.');return false}s.updatedAt=new Date().toISOString();save();return true}
-// v54.3: funciones de contenido faltantes en la impresión de Hoja PDF / Albarán.
-// Los valores de texto se escapan y las imágenes se limitan a datos de imagen locales.
-function servicePhotosHtml(s){
- const entries=[['Foto ANTES',s?.photos?.before],['Foto DESPUÉS',s?.photos?.after]]
-  .filter(([,src])=>typeof src==='string'&&/^data:image\/(?:jpeg|png|webp|gif);base64,/i.test(src));
- if(!entries.length)return '';
- return `<h3>Fotografías del servicio</h3><div style="display:flex;flex-wrap:wrap;gap:12px">${entries.map(([name,src])=>`<figure style="margin:0;max-width:46%"><img alt="${esc(name)}" src="${src}" style="max-width:100%;max-height:220px;object-fit:contain"><figcaption>${esc(name)}</figcaption></figure>`).join('')}</div>`;
-}
-function serviceDetailsHtml(s){
- const d=s?.data||{};
- const sections={
-  madera:[['Tratamiento','woodTreatment'],['Superficie (m²)','woodArea'],['Producto','woodProduct'],['Dosificación','woodDose'],['Zonas','woodZones'],['Observaciones','woodObs']],
-  ddd:[['Actuación','dddType'],['Objetivo','dddTarget'],['Producto','dddProduct'],['Dosificación','dddDose'],['Zonas','dddAreas'],['Observaciones','dddObs']],
-  mobiliario:[['Piezas','furnQty'],['Descripción','furnDesc'],['Tratamiento','furnTreatment'],['Estado','furnCondition'],['Observaciones','furnObs']],
-  termitas:[['Fecha instalación','termiteInstallationDate'],['Estaciones','termiteStationsTotal'],['Sistema','termiteSystem'],['Observaciones','termiteNotes']]
- };
- if(s?.type==='autoclave'){
-  const rows=Array.isArray(d.autoMeasurements)?d.autoMeasurements:[];
-  const validRows=rows.map(row=>({row,vol:autoVolume(row)})).filter(x=>x.vol);
-  const measured=validRows.length?autoFour(autoSum(validRows.map(x=>x.vol))):'';
-  const total=measured||String(d.checkedM3??'').replace(',','.');
-  const items=validRows.length?`<table><thead><tr><th>Concepto</th><th>Uds.</th><th>Largo (m)</th><th>Ancho (m)</th><th>Grosor (m)</th><th>Volumen (m³)</th></tr></thead><tbody>${validRows.map(({row,vol})=>`<tr><td>${esc(row.concept||'')}</td><td>${esc(row.units)}</td><td>${esc(row.length)}</td><td>${esc(row.width)}</td><td>${esc(row.thickness)}</td><td>${autoFour(vol).replace('.',',')}</td></tr>`).join('')}</tbody></table>`:'';
-  return `<h3>Medición de Autoclave</h3>${d.clientDeliveryNo?`<p><b>Albarán cliente:</b> ${esc(d.clientDeliveryNo)}</p>`:''}${items}<p><b>Volumen de nuestra medición:</b> ${esc(total.replace('.',','))} m³</p>${d.declaredM3?`<p><b>Volumen declarado por cliente:</b> ${esc(d.declaredM3)} m³</p>`:''}${d.checkMethod?`<p><b>Comprobación:</b> ${esc(d.checkMethod)}</p>`:''}${d.autoObs?`<p><b>Observaciones:</b> ${esc(d.autoObs)}</p>`:''}`;
- }
- const fields=sections[s?.type]||[];
- const cells=fields.filter(([,key])=>d[key]!==undefined&&d[key]!==null&&String(d[key]).trim()!=='')
-  .map(([label,key])=>`<tr><th>${esc(label)}</th><td>${esc(d[key])}</td></tr>`).join('');
- return cells?`<h3>Datos del servicio</h3><table>${cells}</table>`:'';
-}
 function printServiceDocument(s){const r=s.data.documentReceipt||{},c=getCatalogClient(s),photos=servicePhotosHtml(s),clientPay=c?`<p><b>Forma de pago:</b> ${esc(c.paymentMethod||'—')}${c.iban?` · <b>IBAN:</b> ${esc(maskIban(c.iban))}`:''}</p>`:'';let receipt='';if(r.kind==='Albarán')receipt=`<h3>Recepción</h3><p><b>Recibido por:</b> ${esc(r.receiver)} ${r.receiverRole?`· ${esc(r.receiverRole)}`:''}<br><b>Fecha/hora:</b> ${esc(r.signDate)}${r.carrier?`<br><b>Transportista:</b> ${esc(r.carrier)}`:''}${r.plate?` · <b>Matrícula:</b> ${esc(r.plate)}`:''}</p><p><img src="${r.signature}" alt="Firma recepción" style="max-width:320px;max-height:130px;border-bottom:1px solid #777"></p>`;printDoc(r.kind==='Albarán'?'HOJA DE SERVICIO / ALBARÁN':'HOJA DE SERVICIO',`${companyHeaderHtml()}<h2>${esc(typeMeta[s.type].name)}</h2><p><b>N.º documento:</b> ${esc(r.number||s.number||'')} · <b>Fecha:</b> ${esc(r.date||s.date||'')}</p><p><b>Cliente:</b> ${esc(s.client.name)}<br><b>Dirección:</b> ${esc(s.client.address||c?.address||'')}<br><b>Contacto:</b> ${esc(s.client.contact||c?.contact||'')} · ${esc(s.client.phone||c?.phone||'')}</p>${clientPay}${serviceDetailsHtml(s)}${s.notes?`<p><b>Observaciones:</b><br>${esc(s.notes)}</p>`:''}${r.notes?`<p><b>Observaciones documento:</b><br>${esc(r.notes)}</p>`:''}${photos}${receipt}${companyValidationHtml()}`)}
 
 renderArea=function(area){if(area==='facturacion')return renderInvoices();if(area==='presupuestos')return renderBudgets();const title=area==='albaranes'?'Hoja PDF / Albarán':'Documentos';const eligible=state.services;app.innerHTML=`<section class="hero"><div><span class="eyebrow">ÁREA COMÚN</span><h1>${title}</h1><p>${area==='albaranes'?'Cada hoja de servicio puede generar su PDF técnico o funcionar como albarán con firma de recepción.':'Documentos y certificados asociados a los servicios.'}</p></div></section><section class="list-card"><div class="list-head"><h2>Servicios disponibles</h2><span class="tag">${eligible.length}</span></div><div class="service-list">${eligible.length?eligible.map(s=>`<div class="service-row area-row"><div><b>${typeMeta[s.type].icon} ${esc(typeMeta[s.type].name)}</b><br><small>${esc(s.number||'Sin número')} · ${esc(s.client?.name||'Sin cliente')}</small></div><div><small>${esc(s.date||'')}</small></div><div><span class="tag ${s.status==='FINALIZADA'?'done':'pending'}">${esc(s.status)}</span></div><div></div><button class="btn blue" data-doc-open="${s.id}">${area==='albaranes'?'Hoja PDF / Albarán':'Abrir hoja'}</button></div>`).join(''):'<div class="empty">Todavía no hay servicios.</div>'}</div></section>`;app.querySelectorAll('[data-doc-open]').forEach(b=>b.onclick=()=>{currentId=b.dataset.docOpen;setActiveNav(getCurrent()?.type);area==='albaranes'?openServiceDocument(getCurrent()):renderService()})};
@@ -486,19 +457,7 @@ function bindBudgetRows(){app.querySelectorAll('[data-edit-budget]').forEach(x=>
 function openBudgetForm(id=''){const old=state.budgets.find(b=>b.id===id),b=old||{id:uid(),date:nowDate(),number:budgetNumber(nowDate()),clientId:'',concept:'',base:'',vat:'21',status:'BORRADOR',notes:''};const opts=['<option value="">Selecciona cliente</option>',...state.clients.map(c=>`<option value="${c.id}" ${c.id===b.clientId?'selected':''}>${esc(c.name)}</option>`)].join('');app.innerHTML=`<section class="hero"><div><h1>${old?'Editar presupuesto':'Añadir presupuesto'}</h1><p>Los presupuestos no consumen numeración de servicio hasta que se convierten en un trabajo aceptado.</p></div></section><section class="panel"><div class="settings-grid">${field('budNo','N.º presupuesto',b.number,'text','readonly class="readonly"')}${field('budDate','Fecha',b.date,'date')}<div class="field"><label>Cliente</label><select id="budClient">${opts}</select></div>${field('budConcept','Concepto',b.concept)}${field('budBase','Base imponible (€)',b.base,'text','inputmode="decimal"')}${field('budVat','IVA (%)',b.vat,'text','inputmode="decimal"')}${select('budStatus','Estado',['BORRADOR','ENVIADO','ACEPTADO','RECHAZADO'],b.status||'BORRADOR')}${textarea('budNotes','Observaciones',b.notes||'')}</div><div class="totals"><div class="total"><span>Base</span><strong id="budBaseOut">—</strong></div><div class="total"><span>IVA</span><strong id="budVatOut">—</strong></div><div class="total"><span>Total</span><strong id="budTotalOut">—</strong></div></div><div class="cert-actions"><button class="btn" id="budSave">Guardar presupuesto</button><button class="btn secondary" id="budCancel">Cancelar</button>${old?'<button class="btn blue" id="budPrint">Imprimir / PDF</button><button class="btn secondary" id="budShare">Compartir</button>':''}</div></section>`;const calc=()=>{const base=num($('#budBase').value)||0,vat=num($('#budVat').value)||0;$('#budBaseOut').textContent=money(base);$('#budVatOut').textContent=money(base*vat/100);$('#budTotalOut').textContent=money(base*(1+vat/100))};$('#budBase').oninput=calc;$('#budVat').oninput=calc;$('#budDate').onchange=()=>{if(!old)$('#budNo').value=budgetNumber($('#budDate').value)};calc();$('#budSave').onclick=()=>{const base=num($('#budBase').value)||0,vat=num($('#budVat').value)||0,obj={...b,number:$('#budNo').value,date:$('#budDate').value,clientId:$('#budClient').value,concept:$('#budConcept').value.trim(),base,vat,status:$('#budStatus').value,notes:$('#budNotes').value.trim(),total:base*(1+vat/100),updatedAt:new Date().toISOString()};if(old)state.budgets=state.budgets.map(x=>x.id===obj.id?obj:x);else state.budgets.push(obj);save();toast('Presupuesto guardado');renderBudgets()};$('#budCancel').onclick=renderBudgets;if($('#budPrint'))$('#budPrint').onclick=()=>printBudget(state.budgets.find(x=>x.id===b.id)||b);if($('#budShare'))$('#budShare').onclick=()=>{const x=state.budgets.find(x=>x.id===b.id)||b,c=state.clients.find(c=>c.id===x.clientId);shareDocument({title:'Presupuesto',text:`Presupuesto ${x.number} · ${c?.name||''} · Total ${money(Number(x.total)||0)}`,filename:`${x.number}.txt`})}}
 function printBudget(b){if(!b)return;const c=state.clients.find(x=>x.id===b.clientId),base=Number(b.base)||0,vat=Number(b.vat)||0;printDoc('PRESUPUESTO',`${companyHeaderHtml()}<h2>${esc(c?.name||'Cliente')}</h2><p>${esc(c?.taxId||'')}<br>${esc([c?.address,c?.postalCode,c?.province].filter(Boolean).join(' · '))}</p><p><b>N.º:</b> ${esc(b.number)} · <b>Fecha:</b> ${esc(b.date)}</p><table><tr><th>Concepto</th><th>Base</th></tr><tr><td>${esc(b.concept||'Servicio')}</td><td>${money(base)}</td></tr></table><div class="tot"><p>Base: <b>${money(base)}</b></p><p>IVA ${vat}%: <b>${money(base*vat/100)}</b></p><p>Total: <b>${money(base*(1+vat/100))}</b></p></div>${b.notes?`<p class="note">${esc(b.notes)}</p>`:''}${companyValidationHtml()}`)}
 
-printDoc=function(title,body){const c=state.company||{};const html=`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>@page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:Arial,sans-serif;color:#203129;font-size:11pt;background:#e9ecea;padding:24px}.a4-page{position:relative;width:210mm;min-height:297mm;margin:0 auto;background:#fff;padding:14mm;box-shadow:0 8px 28px rgba(0,0,0,.16);overflow:hidden}header{border-bottom:3px solid #0f7a49;padding-bottom:10px;margin-bottom:20px;display:flex;gap:12px;align-items:center}header img{max-width:100px;max-height:60px;object-fit:contain}h1{color:#0f7a49;margin:0;font-size:21pt}h2{color:#27543d}.meta{font-size:9pt;color:#64776d}.company-doc-head{display:flex;gap:12px;align-items:center;border:1px solid #d5e1db;border-radius:8px;padding:10px;margin:8px 0 18px}.company-doc-head img{max-width:100px;max-height:60px}.company-doc-head small{display:block;color:#64776d}.big{font-size:17pt;font-weight:800;border:1px solid #bdd5c7;padding:12px;border-radius:8px;background:#f3f8f5;margin:15px 0}.sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:60px}.sign span{border-top:1px solid #777;padding-top:6px;text-align:center}.draft{position:absolute;right:20mm;top:35mm;font-size:30pt;color:#b44;opacity:.18;transform:rotate(-12deg);font-weight:900}table{width:100%;border-collapse:collapse;margin:15px 0}th,td{border:1px solid #ccc;padding:9px;text-align:left}.tot{text-align:right;font-size:12pt}.note{font-size:9pt;color:#5f6f67;border:1px solid #ddd;padding:10px;border-radius:8px}footer{margin-top:40px;border-top:1px solid #ccc;padding-top:8px;font-size:8pt;color:#666}.preview-actions{position:sticky;top:12px;z-index:2;display:flex;justify-content:center;gap:8px;margin-bottom:14px}.preview-actions button{border:0;border-radius:9px;padding:10px 14px;background:#0f7a49;color:#fff;font-weight:700;cursor:pointer}.preview-actions button.secondary{background:#fff;color:#0f7a49;border:1px solid #9fc7b0}@media(max-width:900px){body{padding:12px}.a4-page{width:100%;min-height:auto;padding:clamp(14px,4vw,32px);box-shadow:0 4px 18px rgba(0,0,0,.14)}h1{font-size:18pt}.sign{grid-template-columns:1fr;gap:18px;margin-top:36px}}@media print{body{background:#fff;padding:0}.preview-actions{display:none!important}.a4-page{width:210mm;min-height:297mm;margin:0;box-shadow:none;padding:14mm;overflow:visible}}</style></head><body><div class="preview-actions"><button onclick="window.print()">Imprimir / Guardar PDF</button><button class="secondary" onclick="window.close()">Cerrar</button></div><main class="a4-page"><header>${c.logo?`<img src="${c.logo}" alt="Logo">`:''}<div><h1>${esc(title)}</h1><div class="meta">${esc(c.commercialName||c.name||'Empresa')}${c.name&&c.commercialName?` · ${esc(c.name)}`:''}${c.taxId?` · ${esc(c.taxId)}`:''}${c.registration?` · ROESB ${esc(c.registration)}`:''}<br>${esc([c.address,c.postalCode,c.province].filter(Boolean).join(' · '))}</div></div></header>${body}<footer>Generado desde Mis Hojas de Servicio · Piloto v51</footer></main></body></html>`;
-const old=document.getElementById('mhsPrintOverlay');if(old)old.remove();
-const overlay=document.createElement('div');overlay.id='mhsPrintOverlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','Vista previa de impresión');overlay.style.cssText='position:fixed;inset:0;z-index:999999;background:rgba(10,25,18,.8);display:flex;flex-direction:column;padding:12px;gap:8px';
-const bar=document.createElement('div');bar.style.cssText='display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap';
-const printBtn=document.createElement('button');printBtn.textContent='Imprimir / Guardar PDF';printBtn.className='btn blue';
-const closeBtn=document.createElement('button');closeBtn.textContent='Cerrar vista previa';closeBtn.className='btn secondary';
-const frame=document.createElement('iframe');frame.title='Vista previa del documento';frame.style.cssText='flex:1;width:100%;border:0;border-radius:8px;background:white;min-height:0';
-bar.append(printBtn,closeBtn);overlay.append(bar,frame);document.body.appendChild(overlay);frame.srcdoc=html;
-printBtn.onclick=()=>{try{frame.contentWindow.focus();frame.contentWindow.print()}catch(e){alert('No se pudo iniciar la impresión: '+e.message)}};
-closeBtn.onclick=()=>overlay.remove();
-overlay.addEventListener('keydown',e=>{if(e.key==='Escape')overlay.remove()});
-closeBtn.focus();
-};
+printDoc=function(title,body){const c=state.company||{},w=window.open('','_blank');if(!w){alert('Permite ventanas emergentes para imprimir.');return}w.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>@page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0}body{font-family:Arial,sans-serif;color:#203129;font-size:11pt;background:#e9ecea;padding:24px}.a4-page{position:relative;width:210mm;min-height:297mm;margin:0 auto;background:#fff;padding:14mm;box-shadow:0 8px 28px rgba(0,0,0,.16);overflow:hidden}header{border-bottom:3px solid #0f7a49;padding-bottom:10px;margin-bottom:20px;display:flex;gap:12px;align-items:center}header img{max-width:100px;max-height:60px;object-fit:contain}h1{color:#0f7a49;margin:0;font-size:21pt}h2{color:#27543d}.meta{font-size:9pt;color:#64776d}.company-doc-head{display:flex;gap:12px;align-items:center;border:1px solid #d5e1db;border-radius:8px;padding:10px;margin:8px 0 18px}.company-doc-head img{max-width:100px;max-height:60px}.company-doc-head small{display:block;color:#64776d}.big{font-size:17pt;font-weight:800;border:1px solid #bdd5c7;padding:12px;border-radius:8px;background:#f3f8f5;margin:15px 0}.sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:60px}.sign span{border-top:1px solid #777;padding-top:6px;text-align:center}.draft{position:absolute;right:20mm;top:35mm;font-size:30pt;color:#b44;opacity:.18;transform:rotate(-12deg);font-weight:900}table{width:100%;border-collapse:collapse;margin:15px 0}th,td{border:1px solid #ccc;padding:9px;text-align:left}.tot{text-align:right;font-size:12pt}.note{font-size:9pt;color:#5f6f67;border:1px solid #ddd;padding:10px;border-radius:8px}footer{margin-top:40px;border-top:1px solid #ccc;padding-top:8px;font-size:8pt;color:#666}.preview-actions{position:sticky;top:12px;z-index:2;display:flex;justify-content:center;gap:8px;margin-bottom:14px}.preview-actions button{border:0;border-radius:9px;padding:10px 14px;background:#0f7a49;color:#fff;font-weight:700;cursor:pointer}.preview-actions button.secondary{background:#fff;color:#0f7a49;border:1px solid #9fc7b0}@media(max-width:900px){body{padding:12px}.a4-page{width:100%;min-height:auto;padding:clamp(14px,4vw,32px);box-shadow:0 4px 18px rgba(0,0,0,.14)}h1{font-size:18pt}.sign{grid-template-columns:1fr;gap:18px;margin-top:36px}}@media print{body{background:#fff;padding:0}.preview-actions{display:none!important}.a4-page{width:210mm;min-height:297mm;margin:0;box-shadow:none;padding:14mm;overflow:visible}}</style></head><body><div class="preview-actions"><button onclick="window.print()">Imprimir / Guardar PDF</button><button class="secondary" onclick="window.close()">Cerrar</button></div><main class="a4-page"><header>${c.logo?`<img src="${c.logo}" alt="Logo">`:''}<div><h1>${esc(title)}</h1><div class="meta">${esc(c.commercialName||c.name||'Empresa')}${c.name&&c.commercialName?` · ${esc(c.name)}`:''}${c.taxId?` · ${esc(c.taxId)}`:''}${c.registration?` · ROESB ${esc(c.registration)}`:''}<br>${esc([c.address,c.postalCode,c.province].filter(Boolean).join(' · '))}</div></div></header>${body}<footer>Generado desde Mis Hojas de Servicio · Piloto v51</footer></main></body></html>`);w.document.close()};
 
 if(window.MHSOffline){
  MHSOffline.loadState().then(saved=>{if(saved&&Array.isArray(saved.services)){const localStamp=Math.max(0,...(state.services||[]).map(x=>Date.parse(x.updatedAt)||0));const idbStamp=Math.max(0,...saved.services.map(x=>Date.parse(x.updatedAt)||0));if(idbStamp>localStamp){state=saved;try{db.set(state)}catch{};renderDashboard()}}}).catch(()=>{});
@@ -518,4 +477,164 @@ window.MHSApp={
 window.dispatchEvent(new CustomEvent('mhs-app-ready'));
 renderDashboard();
 // v54 piloto: no importar automaticamente datos de otras versiones.
+
+/* Integración controlada con las seis maquetas PDF de referencia aprobadas.
+ * Las plantillas PDF originales no se modifican. Las imágenes aquí usadas son
+ * copias de trabajo vaciadas de sus datos ficticios, nunca modelos rediseñados.
+ */
+const APPROVED_DOCS={
+ autoclave:{sheet:'AUTOCLAVE_HOJA_SERVICIO_APROBADA.png',delivery:'AUTOCLAVE_ALBARAN_APROBADO.png',invoice:'AUTOCLAVE_FACTURA_APROBADA.png'},
+ mobiliario:{sheet:'MOBILIARIO_HOJA_SERVICIO_REFERENCIA.png',delivery:'MOBILIARIO_ALBARAN_REFERENCIA.png',invoice:'MOBILIARIO_FACTURA_REFERENCIA.png'}
+};
+const apDate=d=>{let a=String(d||'').slice(0,10).split('-');return a.length===3&&a[0].length===4?`${a[2]}/${a[1]}/${a[0]}`:String(d||'')};
+const apSafe=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
+const apMoney=v=>Number(v||0).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2});
+const ap4=v=>Number.isFinite(num(v))?fmt4(num(v)):'0,0000';
+const apClient=s=>{const cat=(state.clients||[]).find(x=>String(x.name||'').trim().toLowerCase()===String(s.client?.name||'').trim().toLowerCase())||{};const own=s.client||{};return {...cat,...Object.fromEntries(Object.entries(own).filter(([k,v])=>String(v??'').trim()!=='')),name:own.name||cat.name||''}};
+function apPreview(filename,fields,{title='',draft=false,media=[]}={}){
+ const el=(x,y,value,width=110,size=7,style='')=>{
+  let v=String(value??'').trim();if(!v)return '';
+  return `<div class="ap-field" style="left:${(x/595.276*100).toFixed(5)}%;top:${(y/841.89*100).toFixed(5)}%;width:${(width/595.276*100).toFixed(5)}%;font-size:${size}pt;${style}">${apSafe(v)}</div>`;
+ };
+ const pages=(fields.length&&Array.isArray(fields[0])&&Array.isArray(fields[0][0]))?fields:[fields];
+ const url=apSafe(new URL('approved-backgrounds/'+filename,location.href).href);
+ const mediaHtml=media.filter(m=>/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(m.src||'')).map(m=>`<img class="ap-media" alt="Imagen aportada" src="${m.src}" style="left:${(m.x/595.276*100).toFixed(5)}%;top:${(m.y/841.89*100).toFixed(5)}%;width:${(m.w/595.276*100).toFixed(5)}%;height:${(m.h/841.89*100).toFixed(5)}%">`).join('');
+ const content=pages.map(fs=>`<main class="ap-sheet"><img class="ap-template" alt="Modelo aprobado" src="${url}">${fs.map(f=>el(...f)).join('')}${mediaHtml}${draft?'<div class="ap-watermark">BORRADOR</div>':''}</main>`).join('');
+ const html=`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${apSafe(title)}</title><style>
+ @page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif}body{background:#d7dedb;padding:10px}
+ .ap-sheet{width:min(210mm,100%);aspect-ratio:595.276/841.89;position:relative;margin:0 auto;background:white;box-shadow:0 4px 17px #0003;overflow:hidden}
+ .ap-sheet+.ap-sheet{margin-top:12px}.ap-template{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;display:block}
+ .ap-field{position:absolute;color:#101610;line-height:1.12;white-space:nowrap;overflow:hidden;font-weight:400}
+ .ap-media{position:absolute;object-fit:contain;display:block;background:white}.ap-watermark{position:absolute;top:46%;left:25%;transform:rotate(-25deg);font-size:30pt;font-weight:800;color:#b22;opacity:.25}
+ @media print{body{padding:0;background:white}.ap-sheet{width:210mm;height:297mm;box-shadow:none;break-after:page}.ap-sheet+.ap-sheet{margin-top:0}.ap-sheet:last-child{break-after:auto}.ap-template{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+ </style></head><body>${content}</body></html>`;
+ const old=document.getElementById('mhsApprovedOverlay');if(old)old.remove();
+ const overlay=document.createElement('div');overlay.id='mhsApprovedOverlay';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','Vista previa sobre diseño aprobado');overlay.style.cssText='position:fixed;inset:0;z-index:999999;background:rgba(10,25,18,.83);display:flex;flex-direction:column;gap:8px;padding:12px';
+ const bar=document.createElement('div');bar.style.cssText='display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap';
+ const msg=document.createElement('span');msg.textContent='Modelo aprobado · datos de la hoja';msg.style.cssText='color:white;margin-right:auto;font-weight:600';
+ const btn=document.createElement('button');btn.className='btn blue';btn.textContent='Imprimir / Guardar PDF';btn.disabled=true;
+ const close=document.createElement('button');close.className='btn secondary';close.textContent='Cerrar vista previa';
+ const iframe=document.createElement('iframe');iframe.title='Documento con diseño aprobado';iframe.style.cssText='flex:1;min-height:0;width:100%;border:0;background:white;border-radius:6px';
+ bar.append(msg,btn,close);overlay.append(bar,iframe);document.body.appendChild(overlay);
+ iframe.onload=()=>{const images=[...iframe.contentDocument.images];const ready=images.every(i=>i.complete&&i.naturalWidth>0);btn.disabled=!ready;if(!ready)msg.textContent='Error al cargar la plantilla aprobada; no imprimir.'};iframe.srcdoc=html;
+ btn.onclick=()=>{try{iframe.contentWindow.focus();iframe.contentWindow.print()}catch(err){alert('Error de impresión: '+err.message)}};
+ close.onclick=()=>overlay.remove();overlay.addEventListener('keydown',e=>{if(e.key==='Escape')overlay.remove()});close.focus();
+}
+function apRows(s){const d=s.data||{};if(s.type==='autoclave')return (d.autoMeasurements||[]).filter(r=>Object.values(r||{}).some(v=>String(v??'').trim()));return d.furnDesc?[{concept:d.furnDesc,units:d.furnQty||1,condition:d.furnCondition||'',notes:d.furnObs||''}]:[]}
+function apD(s,kind,forTransport=false){
+ const type=s.type;const d=s.data||{},c=apClient(s),r=d.documentReceipt||{},t=d.transport||{};
+ const fields=[];const add=(x,y,v,w=120,z=7,style='')=>fields.push([x,y,v,w,z,style]);
+ const date=apDate(kind==='delivery'?(forTransport?(t.date||r.date||s.date):(r.date||t.date||s.date)):(r.date||s.date));const number=kind==='delivery'?(forTransport?(t.number||r.number||serviceDocNo(s,'ALB')):(r.number||t.number||serviceDocNo(s,'ALB'))):(r.number||s.number||'');
+ 
+ if(kind==='sheet'&&type==='autoclave'){
+  add(497,74,number,63,7);add(487,96,date,67,7);
+  add(125,176,c.name,120);add(294,176,c.taxId||c.cif,140);add(495,176,c.contact,67);
+  add(68,193,c.address,160);add(327,194,[c.postalCode,c.province].filter(Boolean).join(' - '),145);
+  add(64,210,c.phone,165);add(285,210,c.email,240);
+  add(60,274,d.autoSpecies||'',78);add(215,274,d.autoMoisture||'',35);add(326,274,d.autoUseClass||'',35);
+  const rows=apRows(s);
+  rows.slice(0,4).forEach((row,i)=>{const y=316+i*18.1;let u=num(row.units??row.unidades),a=num(row.length??row.largo),b=num(row.width??row.ancho),g=num(row.thickness??row.grosor);const v=Number.isFinite(u*a*b*g)?fmt4(u*a*b*g):'';add(35,y,Number.isFinite(u)?String(u):'',33);add(99,y,Number.isFinite(a)?Number(a).toFixed(3).replace('.',','):'',49);add(164,y,Number.isFinite(b)?Number(b).toFixed(3).replace('.',','):'',49);add(228,y,Number.isFinite(g)?Number(g).toFixed(3).replace('.',','):'',50);add(288,y,v,52)});
+  add(20,393,'VOLUMEN TOTAL TRATADO: '+ap4(d.checkedM3)+' m³',330,8.1,'font-weight:700');
+  add(423,273,d.autoStartTime||'',55);add(452,290,d.autoEndTime||'',60);
+  add(520,341,d.autoVacuumStart||'',43);add(520,356,d.autoVacuumConstant||'',43);add(529,371,d.autoVacuumSpray||'',35);add(529,386,d.autoVacuumReduction||'',35);add(529,400,d.autoDryTime||'',35);
+  add(240,453,d.autoProduct||'',105);add(269,513,d.clientDeliveryNo||'',70);add(260,530,apDate(d.autoEntryDate||''),96);add(298,551,d.autoExitDeliveryNo||'',54);add(253,563,apDate(d.autoExitDate||''),86);
+  add(17,619,d.autoObs||s.notes||'',337,7);add(65,707,state.company?.directorName||'',145);add(90,730,state.company?.directorLicense||'',115);
+ } else if(kind==='sheet'&&type==='mobiliario'){
+  add(496,57,number,70);add(474,78,date,75);add(147,161,c.name,125);add(330,161,c.taxId,93);add(488,161,c.contact,95);add(84,180,c.address,183);add(369,180,[c.postalCode,c.province].filter(Boolean).join(' / '),188);add(80,200,c.phone,164);add(320,200,c.email,240);
+  const rows=apRows(s);rows.slice(0,6).forEach((row,i)=>{const y=288+i*19;add(26,y,row.concept,172);add(213,y,row.units,36);add(256,y,row.condition,50);add(311,y,row.notes,83)});
+  add(488,261,apDate(d.furnPickupDate),70);add(488,279,apDate(d.furnDeliveryDate),70);add(414,371,d.furnTreatment?'X':'',10);
+  add(415,529,d.furnCondition||'',150);add(26,623,d.furnObs||s.notes||'',540);add(89,706,state.company?.directorName||'',180);
+ } else if(kind==='delivery'&&type==='autoclave'){
+  add(500,81,number,74);add(506,95,date,73);add(122,153,c.name,177);add(348,153,c.address,229);add(69,171,c.phone,101);add(226,171,c.email,178);add(452,171,c.contact,115);
+  const rows=apRows(s);
+  rows.slice(0,7).forEach((v,i)=>{const y=248+i*15.8;add(27,y,v.concept||'',112);add(148,y,v.units||'',30);add(186,y,v.length||'',43);add(234,y,v.width||'',43);add(285,y,v.thickness||'',38);add(339,y,d.autoMoisture||'',45);add(395,y,d.autoUseClass||'',55);add(456,y,v.notes||'',123,6.3)});
+  add(275,375,'Tratamiento de madera en autoclave',270);add(323,389,d.autoStartTime||'',80);add(519,389,d.autoEndTime||'',55);add(311,406,d.autoProduct||'',165);add(333,422,d.autoUseClass||'',160);add(234,473,d.autoObs||s.notes||r.notes||'',330);
+  add(118,548,t.company||r.carrier||'',180);add(106,566,t.plate||r.plate||'',135);add(348,566,t.driver||r.receiver||'',165);add(53,583,t.driverId||'',115);
+ } else if(kind==='delivery'&&type==='mobiliario'){
+  add(467,86,number,108);add(496,99,date,75);add(132,159,c.name,205);add(403,159,c.address,174);add(80,179,c.phone,118);add(242,179,c.email,168);add(461,179,c.contact,114);
+  apRows(s).slice(0,7).forEach((v,i)=>{const y=256+i*17.3;add(27,y,v.concept,220);add(270,y,v.units,55);add(331,y,v.condition,50);add(389,y,v.notes,183)});
+  add(303,392,'Tratamiento de mobiliario',250);add(354,408,apDate(d.furnPickupDate),100);add(404,423,apDate(d.furnDeliveryDate),100);add(330,439,d.furnTreatment,180);add(264,489,d.furnObs||s.notes||r.notes||'',298);
+  add(132,562,t.company||r.carrier||'',180);add(124,580,t.plate||r.plate||'',130);add(371,580,t.driver||r.receiver||'',186);
+ }
+ return fields;
+}
+function apInvoice(s,invoice=null,results=null){
+ const d=s.data||{},type=s.type,c=(invoice?.clientId?(state.clients||[]).find(x=>x.id===invoice.clientId):null)||apClient(s),r=results||{},fields=[],add=(x,y,v,w=120,z=7)=>fields.push([x,y,v,w,z]);
+ const base=invoice?Number(invoice.base)||0:(Number(r.base)||((type==='autoclave'?num(d.checkedM3)*num(d.autoPriceM3):num(d.furnQty)*num(d.furnUnitPrice))||0));
+ const vatPct=invoice?Number(invoice.vat)||0:21,total=base*(1+vatPct/100);const invNo=invoice?.number||serviceDocNo(s,'FRA'),date=apDate(invoice?.date||s.date);
+ add(type==='autoclave'?495:460,type==='autoclave'?74:74,invNo,111);add(type==='autoclave'?499:468,type==='autoclave'?99:97,date,90);
+ add(120,189,c.name,170);add(type==='autoclave'?60:54,207,c.taxId,165);add(98,224,c.address,193);add(108,242,c.postalCode,173);add(95,259,c.province,181);
+ add(365,189,c.phone,200);add(354,207,c.email,230);add(433,224,c.contact,138);add(399,242,c.paymentMethod||'',175);
+ const qty=type==='autoclave'?ap4(d.checkedM3):String(d.furnQty||1);
+ const qtyNumber=num(qty),storedPrice=type==='autoclave'?num(d.autoPriceM3):num(d.furnUnitPrice);
+ const price=(invoice&&Number.isFinite(qtyNumber)&&qtyNumber>0)?base/qtyNumber:(Number.isFinite(storedPrice)?storedPrice:0);
+ add(27,350,serviceDocNo(s,type==='autoclave'?'AUT':'MOB'),74,6.7);add(105,346,invoice?.concept||r.concept||(type==='autoclave'?'Tratamiento en autoclave':d.furnDesc||'Tratamiento de mobiliario'),175,6.7);
+ add(306,350,qty,48,6.7);add(376,350,apMoney(price),53,6.7);add(430,350,'0,00',30,6.7);add(467,350,apMoney(vatPct),36,6.7);add(515,350,apMoney(base),58,6.7);
+ add(27,603,invoice?.notes||d.autoObs||d.furnObs||s.notes||'',254,6.5);
+ add(500,583,apMoney(base)+' €',75,7);add(304,654,apMoney(vatPct)+' %',53,7);add(421,654,apMoney(base)+' €',61,7);add(517,654,apMoney(base*vatPct/100)+' €',60,7);add(495,703,apMoney(total)+' €',79,8);
+ add(76,725,c.paymentMethod||'',175,6.5);add(76,742,c.paymentTerms||'',140,6.5);add(132,760,c.iban||'',235,6.2);
+ apPreview(APPROVED_DOCS[type].invoice,fields,{title:'Factura '+type,draft:!!invoice&&invoice.status!=='EMITIDA'||!invoice});
+}
+
+function apMedia(s,kind,transport=false){
+ const m=[],d=s.data||{},r=d.documentReceipt||{},t=d.transport||{};
+ const photo=s.photos?.before||'';
+ if(photo){
+  if(s.type==='autoclave')m.push({src:photo,x:kind==='sheet'?18:34,y:kind==='sheet'?455:382,w:kind==='sheet'?168:173,h:kind==='sheet'?116:118});
+  else m.push({src:photo,x:kind==='sheet'?31:32,y:kind==='sheet'?470:411,w:kind==='sheet'?174:216,h:kind==='sheet'?90:107});
+ }
+ if(kind==='delivery'){
+  const signature=transport?t.signature:r.signature;
+  if(signature)m.push({src:signature,x:s.type==='autoclave'?37:31,y:s.type==='autoclave'?655:665,w:s.type==='autoclave'?235:230,h:65});
+ }
+ if(kind==='sheet'){
+  const sig=state.company?.directorSignature;if(sig)m.push({src:sig,x:220,y:715,w:149,h:48});
+ }
+ return m;
+}
+
+// Divide todas las mediciones de Autoclave en copias sucesivas del mismo modelo aprobado.
+// Nunca se omiten filas ni se modifica el original.
+function apDocumentPages(s,kind,forTransport=false){
+ const rows=apRows(s);
+ if(s.type!=='autoclave'||!rows.length)return apD(s,kind,forTransport);
+ if(typeof autoVolume==='function'&&rows.some(row=>!autoVolume(row))){
+   alert('Hay mediciones incompletas o no válidas. Corrige la tabla antes de generar el documento.');return null;
+ }
+ const limit=kind==='sheet'?4:7,count=Math.ceil(rows.length/limit),pages=[];
+ for(let i=0;i<count;i++){
+   const segment={...s,data:{...(s.data||{}),autoMeasurements:rows.slice(i*limit,(i+1)*limit)}};
+   const fields=apD(segment,kind,forTransport);
+   if(!fields)return null;
+   if(count>1)fields.push([470,806,`Página ${i+1} de ${count}`,91,7]);
+   pages.push(fields);
+ }
+ return pages.length===1?pages[0]:pages;
+}
+// Reutilizar exactamente los puntos de entrada existentes. Los demás módulos no se modifican.
+const apLegacyPrintService=printServiceDocument;
+printServiceDocument=function(s){
+ if(!APPROVED_DOCS[s.type])return apLegacyPrintService(s);
+ const r=s.data?.documentReceipt||{},kind=r.kind==='Albarán'?'delivery':'sheet';
+ const fields=apDocumentPages(s,kind);if(fields)apPreview(APPROVED_DOCS[s.type][kind],fields,{title:kind==='sheet'?'Hoja de servicio aprobada':'Albarán aprobado',media:apMedia(s,kind)});
+};
+const apLegacyPrintTransport=printTransport;
+printTransport=function(s){
+ if(!APPROVED_DOCS[s.type])return apLegacyPrintTransport(s);
+ const t=s.data?.transport||{};
+ if(!t.receiver||!t.signDate||!t.signature){alert('El albarán necesita firma de recepción antes de imprimir.');return}
+ const fields=apDocumentPages(s,'delivery',true);
+ if(fields)apPreview(APPROVED_DOCS[s.type].delivery,fields,{title:'Albarán aprobado',media:apMedia(s,'delivery',true)});
+};
+const apLegacyPrintInvoice=printInvoice;
+printInvoice=function(i){
+ if(!i)return;
+ const s=state.services.find(x=>x.id===i.serviceId);
+ if(!s){alert('Para utilizar la factura aprobada, vincula primero la factura a su hoja de servicio. No se generará una factura con otro diseño.');return}
+ if(!APPROVED_DOCS[s.type])return apLegacyPrintInvoice(i);
+ apInvoice(s,i);
+};
+const apLegacyBillingPreview=printBillingPreview;
+printBillingPreview=function(s,r){if(!APPROVED_DOCS[s.type])return apLegacyBillingPreview(s,r);apInvoice(s,null,r);};
+
 })();

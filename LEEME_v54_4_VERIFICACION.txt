@@ -1,0 +1,28 @@
+MHS PILOTO v54.4 — REVISIÓN SOBRE v54.1, NO PARA PRODUCCIÓN AUTOMÁTICA
+
+QUÉ CAMBIA
+- Se parte del piloto v54.1 con su tabla de mediciones de Autoclave y sin cambiar la clave de datos locales.
+- En Autoclave y Mobiliario, las opciones existentes de Hoja PDF/Albarán, Albarán de transporte y Factura se representan sobre copias de trabajo de los seis modelos PDF aprobados, no sobre un formato genérico nuevo.
+- Las copias de trabajo son imágenes del diseño aprobado, de las que se han retirado exclusivamente los datos de ejemplo y las fotos/firmas ficticias. Los seis PDF fuente originales siguen dentro de plantillas-aprobadas/ y NO han sido editados.
+- La vista previa abre dentro de la aplicación. El botón «Imprimir / Guardar PDF» llama a la impresión de Chrome, para seleccionar «Guardar como PDF».
+- Autoclave permite varias páginas de modelo aprobado si sus filas de medición no caben en una sola página: 4 filas en hoja, 7 en albarán, sin descartar filas.
+- No se cambian las funciones de Madera, DDD y Termitas ni el guardado de clientes, productos o servicios.
+
+VERIFICACIONES REALIZADAS ANTES DE ENTREGAR
+- Sintaxis JavaScript: correcta.
+- Comparación de seis plantillas PDF originales con el ZIP v54: SHA-256 idéntico en las seis.
+- En navegador Chromium automatizado: vistas de Hoja de Servicio, Albarán y Factura de Autoclave y Mobiliario, sin errores de JavaScript.
+- Los seis documentos de prueba se han exportado con el motor PDF de Chromium y comprobado que tienen tamaño A4 y una página cuando los datos caben.
+- En la prueba Autoclave de 5 filas, Hoja PDF se distribuye en dos páginas sin omitir las mediciones.
+- Los botones de impresión de hojas y albaranes llaman a window.print correctamente.
+- En prueba Autoclave: 0,1000 m³ con 100 €/m³; base 10,00 €, IVA 2,10 €, total 12,10 €.
+
+LIMITACIONES IMPORTANTES
+- No se ha probado todavía en el Chrome del Mac del usuario ni en la publicación GitHub Pages real; las pruebas fueron locales automatizadas.
+- Los datos técnicos que aún no tienen campo de entrada en la aplicación permanecen en blanco en el PDF: no se inventan. Son, por ejemplo, ciertos parámetros de ciclo, fechas de recogida/entrega o datos de transportista si no se han registrado.
+- Las seis plantillas tienen maquetación fija. Campos excesivamente largos pueden necesitar ajustes adicionales; hay que comprobar la vista previa antes de emitir documentos finales.
+- La impresión se construye a partir de una imagen de alta resolución de la plantilla de referencia más los datos actuales; por tanto, el contenido de la plantilla que se imprime queda rasterizado, aunque los datos nuevos se añaden como texto.
+- No considerar producción ni emitir facturas fiscales hasta revisar los datos de empresa, cliente y numeración.
+
+INSTALACIÓN
+Descomprimir este ZIP y subir los archivos Y LAS CARPETAS del contenido a la rama de pruebas del repositorio MHS-PRUEBAS-V54. NO subir a la rama main de la aplicación estable. Repetir las pruebas en el navegador y no borrar la memoria local ni los datos de clientes. Exportar copia JSON antes de desplegar cualquier cambio.
