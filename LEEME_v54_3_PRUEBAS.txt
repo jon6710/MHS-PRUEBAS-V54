@@ -1,0 +1,7 @@
+MHS PILOTO v54.3 · PRUEBAS
+
+Corrección del error servicePhotosHtml is not defined al imprimir Hoja PDF / Albarán. También se añade la función ausente serviceDetailsHtml para mostrar datos de los servicios, incluida la tabla de mediciones de Autoclave.
+Se mantiene la vista previa de impresión de v54.2.
+No se cambia la lógica de clientes, guardado, facturación ni las seis plantillas PDF aprobadas.
+ATENCIÓN: imprime HTML; no rellena las plantillas PDF aprobadas directamente.
+Solo para el repositorio de pruebas.
