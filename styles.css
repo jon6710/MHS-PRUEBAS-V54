@@ -28,3 +28,18 @@ body{overflow-x:hidden}.app-shell{display:grid;grid-template-columns:238px minma
 @media(max-width:980px){.client-row{grid-template-columns:1fr 1fr auto}.client-row>div:nth-child(3),.client-row>div:nth-child(4){display:none}}
 @media(max-width:900px){.company-media-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.client-row{grid-template-columns:1fr}.company-logo-editor .btn{flex:1 1 45%}.logo-preview{width:100%;height:100px}}
+
+/* v54.1 - tabla de mediciones de Autoclave */
+.auto-table-scroll{overflow-x:auto;max-width:100%;margin-bottom:12px}
+.auto-measure-table{border-collapse:collapse;min-width:850px;width:100%;font-size:13px}
+.auto-measure-table th,.auto-measure-table td{border:1px solid #d7e2da;padding:8px;text-align:left}
+.auto-measure-table thead th{background:#f2f7f3;color:#28583e;font-size:12px}
+.auto-measure-table input{width:100%;min-width:78px;border:1px solid #c9d6ce;border-radius:7px;padding:9px 7px;background:white;color:var(--ink)}
+.auto-measure-table td:first-child input{min-width:150px}
+.auto-measure-table .auto-volume,.auto-measure-table tfoot td{font-weight:800;white-space:nowrap}
+.auto-measure-table tfoot{background:#e9f5ed}
+.auto-measure-table tfoot th{text-align:right}
+.auto-measure-table .auto-remove{min-height:36px;padding:7px 12px;color:#a42b2b;border-color:#edc8c8}
+.auto-measure-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.auto-measure-actions small{color:var(--muted)}
+#autoLegacyNotice{margin:10px 0}

@@ -114,9 +114,91 @@ function bindMaderaBilling(){document.querySelectorAll('[name=billModeChoice]').
 function showMaderaBilling(mode){$('#billM2Box').classList.toggle('hidden',!['m2','combinada'].includes(mode));$('#billBudgetBox').classList.toggle('hidden',mode!=='presupuesto');$('#billPackBox').classList.toggle('hidden',!['pack','combinada'].includes(mode))}
 function calcMadera(){const mode=$('#billMode')?.value||'m2',area=num($('#woodArea')?.value),pm=num($('#billPriceM2')?.value),other=num($('#billOther')?.value)||0,bud=num($('#billBudgetAmount')?.value),pack=num($('#billPackAmount')?.value)||0,vat=num($('#billVat')?.value)||0;let base=0;if(mode==='m2')base=(Number.isFinite(area)&&Number.isFinite(pm)?area*pm:0)+other;if(mode==='presupuesto')base=Number.isFinite(bud)?bud:0;if(mode==='pack')base=pack;if(mode==='combinada')base=(Number.isFinite(area)&&Number.isFinite(pm)?area*pm:0)+pack+other;const iva=base*vat/100,total=base+iva;if($('#mBase')){$('#mBase').textContent=money(base);$('#mVat').textContent=money(iva);$('#mTotal').textContent=money(total)}return{mode,base,iva,total}}
 
-function renderAutoclave(s){const d=s.data||{};app.innerHTML=toolbar(s,{transport:true})+`<div class="sheet">${commonHeader(s,'Autoclave')}<div class="sheet-body">${commonSection(s)}<section class="section"><h3>2. Albarán del cliente · referencia comparativa</h3><div class="inner"><div class="grid">${field('clientDeliveryNo','N.º albarán cliente (opcional)',d.clientDeliveryNo||'')}${field('declaredM3','m³ declarados por cliente (opcional)',d.declaredM3||'','text','inputmode="decimal"')}<div class="field full"><div class="notice">El albarán del cliente sirve como referencia. Los m³ a facturar se basan siempre en nuestra medición.</div></div></div></div></section><section class="section"><h3>3. Medición propia y control de volumen</h3><div class="inner"><div class="grid">${field('checkedM3','Nuestra medición (m³) *',d.checkedM3||'','text','inputmode="decimal"')}${select('checkMethod','Forma de comprobación',['Medición directa','Cubicación','Recuento y dimensiones','Otro'],d.checkMethod||'Medición directa')}</div><div class="kpis"><div class="kpi"><span>Cliente</span><strong id="aDeclared">—</strong></div><div class="kpi"><span>Nuestra medición</span><strong id="aChecked">—</strong></div><div class="kpi"><span>Diferencia</span><strong id="aDiff">—</strong></div><div class="kpi"><span>Diferencia %</span><strong id="aPct">—</strong></div></div></div></section><section class="section"><h3>4. m³ a facturar</h3><div class="inner"><div class="grid">${field('billM3','m³ a facturar',d.billM3||'','text','readonly class="readonly"')} ${field('autoPriceM3','Precio €/m³',d.autoPriceM3||'','text','inputmode="decimal"')}</div><div class="notice"><b>Regla fija:</b> m³ a facturar = nuestra medición, truncada a 4 decimales, sin redondear.</div><div class="totals"><div class="total"><span>Base estimada</span><strong id="aBase">—</strong></div><div class="total"><span>IVA 21 %</span><strong id="aVat">—</strong></div><div class="total"><span>Total</span><strong id="aTotal">—</strong></div></div></div></section>${photoSection(s)}${textarea('autoObs','Observaciones',d.autoObs||'')}</div></div>`;bindCommon(s,collectAutoclave,{transport:true});['declaredM3','checkedM3','autoPriceM3'].forEach(id=>$('#'+id)?.addEventListener('input',calcAutoclave));$('#checkedM3')?.addEventListener('blur',()=>{const n=trunc4(num($('#checkedM3').value));if(Number.isFinite(n))$('#checkedM3').value=n.toFixed(4);calcAutoclave()});$('#declaredM3')?.addEventListener('blur',()=>{const n=trunc4(num($('#declaredM3').value));if(Number.isFinite(n))$('#declaredM3').value=n.toFixed(4);calcAutoclave()});calcAutoclave()}
-function collectAutoclave(s){commonCollect(s);const d=s.data=s.data||{};['clientDeliveryNo','declaredM3','checkedM3','checkMethod','autoPriceM3','autoObs'].forEach(k=>{const e=$('#'+k);if(e)d[k]=e.value});const b=trunc4(num(d.checkedM3));d.billM3=Number.isFinite(b)?b.toFixed(4):'';calcAutoclave()}
-function calcAutoclave(){const a=trunc4(num($('#declaredM3')?.value)),b=trunc4(num($('#checkedM3')?.value)),diff=Number.isFinite(a)&&Number.isFinite(b)?trunc4(b-a):NaN,pct=Number.isFinite(diff)&&a!==0?trunc4(diff/a*100):NaN,price=num($('#autoPriceM3')?.value);if($('#billM3'))$('#billM3').value=Number.isFinite(b)?fmt4(b):'';if($('#aDeclared')){$('#aDeclared').textContent=Number.isFinite(a)?fmt4(a)+' m³':'—';$('#aChecked').textContent=Number.isFinite(b)?fmt4(b)+' m³':'—';$('#aDiff').textContent=Number.isFinite(diff)?fmt4(diff)+' m³':'—';$('#aPct').textContent=Number.isFinite(pct)?fmt4(pct)+' %':'—'}const base=Number.isFinite(b)&&Number.isFinite(price)?b*price:0,iva=base*.21;if($('#aBase')){$('#aBase').textContent=money(base);$('#aVat').textContent=money(iva);$('#aTotal').textContent=money(base+iva)}return{a,b,diff,pct,base}}
+// v54.1: cálculo decimal exacto con BigInt; truncado SOLO al mostrar los cuatro decimales.
+function autoDecimal(value){
+ const s=String(value??'').trim().replace(',','.');
+ if(!/^\d+(?:\.\d+)?$/.test(s))return null;
+ const parts=s.split('.');return {n:BigInt(parts[0]+(parts[1]||'')),scale:(parts[1]||'').length};
+}
+function autoVolume(row){
+ const values=[row.units,row.length,row.width,row.thickness].map(autoDecimal);
+ if(values.some(x=>!x))return null;
+ if(values[0].scale!==0||values.some(x=>x.n<=0n))return null;
+ return values.reduce((r,x)=>({n:r.n*x.n,scale:r.scale+x.scale}),{n:1n,scale:0});
+}
+function autoSum(volumes){
+ const scale=Math.max(0,...volumes.map(x=>x.scale));
+ return {n:volumes.reduce((sum,v)=>sum+v.n*10n**BigInt(scale-v.scale),0n),scale};
+}
+function autoFour(v){
+ if(!v)return '';
+ const n=v.n*10000n/10n**BigInt(v.scale);
+ return (n/10000n).toString()+'.'+(n%10000n).toString().padStart(4,'0');
+}
+function autoRowsFromUI(){return [...document.querySelectorAll('#autoMeasureBody tr')].map(tr=>({
+ concept:tr.querySelector('[data-measure="concept"]').value,
+ units:tr.querySelector('[data-measure="units"]').value,
+ length:tr.querySelector('[data-measure="length"]').value,
+ width:tr.querySelector('[data-measure="width"]').value,
+ thickness:tr.querySelector('[data-measure="thickness"]').value
+}));}
+function autoMeasureRow(row={}){
+ const keys=['concept','units','length','width','thickness'];
+ const labels=['Concepto','Unidades','Largo (m)','Ancho (m)','Grosor (m)'];
+ return `<tr>${keys.map((key,i)=>`<td><input aria-label="${labels[i]}" data-measure="${key}" value="${esc(row[key]??'')}" type="text" ${i?'inputmode="decimal"':''} autocomplete="off"></td>`).join('')}<td class="auto-volume" aria-label="Volumen en metros cúbicos">—</td><td><button type="button" class="btn secondary auto-remove" aria-label="Eliminar fila de medición">×</button></td></tr>`;
+}
+function autoAddRow(row={}){const body=$('#autoMeasureBody');if(!body)return;body.insertAdjacentHTML('beforeend',autoMeasureRow(row));calcAutoclave()}
+function renderAutoclave(s){
+ const d=s.data||{};
+ app.innerHTML=toolbar(s,{transport:true})+`<div class="sheet">${commonHeader(s,'Autoclave')}<div class="sheet-body">${commonSection(s)}
+ <section class="section"><h3>2. Albarán del cliente · referencia comparativa</h3><div class="inner"><div class="grid">${field('clientDeliveryNo','N.º albarán cliente (opcional)',d.clientDeliveryNo||'')}${field('declaredM3','m³ declarados por cliente (opcional)',d.declaredM3||'','text','inputmode="decimal"')}<div class="field full"><div class="notice">El albarán del cliente sirve como referencia. Los m³ a facturar se basan siempre en nuestra medición.</div></div></div></div></section>
+ <section class="section"><h3>3. Medición propia y control de volumen</h3><div class="inner">
+ <div class="auto-table-scroll"><table class="auto-measure-table"><thead><tr><th>Concepto</th><th>Unidades</th><th>Largo (m)</th><th>Ancho (m)</th><th>Grosor (m)</th><th>Volumen (m³)</th><th></th></tr></thead><tbody id="autoMeasureBody">${(Array.isArray(d.autoMeasurements)&&d.autoMeasurements.length?d.autoMeasurements:[{}]).map(autoMeasureRow).join('')}</tbody><tfoot><tr><th colspan="5" scope="row">TOTAL m³</th><td id="autoMeasureTotal">0,0000</td><td></td></tr></tfoot></table></div>
+ <div class="auto-measure-actions"><button type="button" class="btn secondary" id="autoAddMeasure">+ Añadir fila</button><small>Volumen = unidades × largo × ancho × grosor. Se muestran 4 decimales truncados, sin redondear.</small></div>
+ <div class="grid">${field('checkedM3','Nuestra medición total (m³)',d.checkedM3||'','text','readonly class="readonly"')}${select('checkMethod','Forma de comprobación',['Medición directa','Cubicación','Recuento y dimensiones','Otro'],d.checkMethod||'Medición directa')}</div>
+ <div class="notice warn" id="autoIncompleteNotice" hidden>Hay filas incompletas o con medidas no válidas: no se incluyen en el total. Comprueba unidades enteras y dimensiones positivas.</div>
+ <div class="notice" id="autoLegacyNotice" hidden>Esta hoja tenía una medición manual anterior. Se conserva hasta que completes una fila de medidas válida.</div>
+ <div class="kpis"><div class="kpi"><span>Cliente</span><strong id="aDeclared">—</strong></div><div class="kpi"><span>Nuestra medición</span><strong id="aChecked">—</strong></div><div class="kpi"><span>Diferencia</span><strong id="aDiff">—</strong></div><div class="kpi"><span>Diferencia %</span><strong id="aPct">—</strong></div></div></div></section>
+ <section class="section"><h3>4. m³ a facturar</h3><div class="inner"><div class="grid">${field('billM3','m³ a facturar',d.billM3||'','text','readonly class="readonly"')}${field('autoPriceM3','Precio €/m³',d.autoPriceM3||'','text','inputmode="decimal"')}</div><div class="notice"><b>Regla fija:</b> m³ a facturar = nuestra medición, truncada a 4 decimales, sin redondear.</div><div class="totals"><div class="total"><span>Base estimada</span><strong id="aBase">—</strong></div><div class="total"><span>IVA 21 %</span><strong id="aVat">—</strong></div><div class="total"><span>Total</span><strong id="aTotal">—</strong></div></div></div></section>${photoSection(s)}${textarea('autoObs','Observaciones',d.autoObs||'')}</div></div>`;
+ // Guardamos el valor anterior solo para compatibilidad con hojas antiguas.
+ $('#checkedM3').dataset.legacy=d.checkedM3||'';
+ bindCommon(s,collectAutoclave,{transport:true});
+ $('#autoAddMeasure').onclick=()=>autoAddRow();
+ $('#autoMeasureBody').addEventListener('input',calcAutoclave);
+ $('#autoMeasureBody').addEventListener('click',e=>{const btn=e.target.closest('.auto-remove');if(!btn)return;btn.closest('tr').remove();calcAutoclave()});
+ ['declaredM3','autoPriceM3'].forEach(id=>$('#'+id)?.addEventListener('input',calcAutoclave));
+ $('#declaredM3')?.addEventListener('blur',()=>{const n=trunc4(num($('#declaredM3').value));if(Number.isFinite(n))$('#declaredM3').value=n.toFixed(4);calcAutoclave()});
+ calcAutoclave();
+}
+function collectAutoclave(s){
+ commonCollect(s);const d=s.data=s.data||{};
+ ['clientDeliveryNo','declaredM3','checkMethod','autoPriceM3','autoObs'].forEach(k=>{const e=$('#'+k);if(e)d[k]=e.value});
+ d.autoMeasurements=autoRowsFromUI();
+ calcAutoclave();
+ d.checkedM3=$('#checkedM3').value;
+ d.billM3=$('#billM3').value.replace(',','.');
+}
+function calcAutoclave(){
+ const rows=autoRowsFromUI(),volumes=[];
+ document.querySelectorAll('#autoMeasureBody tr').forEach((tr,i)=>{
+  const volume=autoVolume(rows[i]);if(volume)volumes.push(volume);
+  tr.querySelector('.auto-volume').textContent=volume?autoFour(volume).replace('.',','):'—';
+ });
+ const legacy=$('#checkedM3')?.dataset.legacy||'';
+ const total=volumes.length?autoFour(autoSum(volumes)):'';
+ const incomplete=rows.some(row=>Object.values(row).some(v=>String(v).trim())&&!autoVolume(row));
+ if($('#autoIncompleteNotice'))$('#autoIncompleteNotice').hidden=!incomplete;
+ const checked=total||(Number.isFinite(num(legacy))?autoFour(autoDecimal(legacy)):''),b=num(checked);
+ if($('#checkedM3'))$('#checkedM3').value=checked.replace('.',',');
+ if($('#autoMeasureTotal'))$('#autoMeasureTotal').textContent=total?total.replace('.',','):'0,0000';
+ if($('#autoLegacyNotice'))$('#autoLegacyNotice').hidden=!!total||!legacy;
+ const a=trunc4(num($('#declaredM3')?.value)),diff=Number.isFinite(a)&&Number.isFinite(b)?trunc4(b-a):NaN,pct=Number.isFinite(diff)&&a!==0?trunc4(diff/a*100):NaN,price=num($('#autoPriceM3')?.value);
+ if($('#billM3'))$('#billM3').value=Number.isFinite(b)?checked.replace('.',','):'';
+ if($('#aDeclared')){$('#aDeclared').textContent=Number.isFinite(a)?fmt4(a)+' m³':'—';$('#aChecked').textContent=Number.isFinite(b)?checked.replace('.',',')+' m³':'—';$('#aDiff').textContent=Number.isFinite(diff)?fmt4(diff)+' m³':'—';$('#aPct').textContent=Number.isFinite(pct)?fmt4(pct)+' %':'—'}
+ const base=Number.isFinite(b)&&Number.isFinite(price)?b*price:0,iva=base*.21;
+ if($('#aBase')){$('#aBase').textContent=money(base);$('#aVat').textContent=money(iva);$('#aTotal').textContent=money(base+iva)}
+ return {a,b,diff,pct,base};
+}
 
 function renderDDD(s){const d=s.data||{};app.innerHTML=toolbar(s)+`<div class="sheet">${commonHeader(s,'DDD')}<div class="sheet-body">${commonSection(s)}<section class="section"><h3>2. Actuación DDD</h3><div class="inner"><div class="grid">${select('dddType','Tipo de actuación',['Desinsectación','Desratización','Desinfección','Inspección / seguimiento','Combinada'],d.dddType||'Desinsectación')}${field('dddTarget','Plaga / objetivo',d.dddTarget||'')}${field('dddProduct','Producto',d.dddProduct||'')}${field('dddDose','Dosis / cantidad aplicada',d.dddDose||'')}${textarea('dddAreas','Zonas tratadas',d.dddAreas||'')}${textarea('dddObs','Observaciones y recomendaciones',d.dddObs||'')}</div></div></section>${photoSection(s)}<section class="section"><h3>4. Facturación DDD · provisional</h3><div class="inner"><div class="notice warn">DDD es una hoja independiente. Hasta que definamos contigo su forma exacta de cobro, este piloto permite registrar una referencia e importe manual sin imponer reglas.</div><div class="grid">${field('dddBillRef','Referencia presupuesto / factura',d.dddBillRef||'')}${field('dddBillAmount','Importe base (€)',d.dddBillAmount||'','text','inputmode="decimal"')}</div></div></section></div></div>`;bindCommon(s,collectDDD)}
 function collectDDD(s){commonCollect(s);const d=s.data=s.data||{};['dddType','dddTarget','dddProduct','dddDose','dddAreas','dddObs','dddBillRef','dddBillAmount'].forEach(k=>{const e=$('#'+k);if(e)d[k]=e.value})}

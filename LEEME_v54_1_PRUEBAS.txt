@@ -1,0 +1,16 @@
+MHS PILOTO COMPLETO v54.1 — PRUEBAS (04-11-2026)
+
+Partiendo de la v54 aportada por el usuario, se incorpora a AUToclave una tabla de mediciones con columnas Concepto, Unidades, Largo (m), Ancho (m), Grosor (m), Volumen (m³).
+
+- Cada fila completa calcula unidades × largo × ancho × grosor.
+- La suma se realiza con precisión decimal y se TRUNCA a 4 decimales al mostrar el volumen total, nunca se redondea.
+- Se pueden añadir y borrar filas; las filas se guardan en data.autoMeasurements.
+- El volumen resultante alimenta data.checkedM3 y data.billM3; se mantienen facturación, albarán y certificado.
+- Las mediciones manuales de hojas antiguas permanecen como referencia hasta introducir filas válidas.
+- No se alteran módulos, clientes, productos, diseños PDF ni plantillas aprobadas.
+- Se conservan las claves locales v54 para abrir los datos de la rama de PRUEBAS, sin trasladarlos a v51 estable.
+- Se incrementa la caché del service worker para actualizar los archivos estáticos del piloto.
+
+IMPORTANTE: Subir solo a rama o ubicación aislada de PRUEBAS, nunca sustituir main ni el entorno estable.
+Probar en dispositivo real: cálculo, entradas con coma decimal, guardado/reapertura, sincronización offline, albarán y facturación.
+El paquete no modifica ni conecta las plantillas PDF de referencia: siguen siendo documentos comparativos.

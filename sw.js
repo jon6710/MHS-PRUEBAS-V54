@@ -1,4 +1,4 @@
-const CACHE='mhs-v54-ensayos';
+const CACHE='mhs-v54-1-ensayos';
 const ASSETS=[
   './','./index.html','./styles.css','./app.js','./offline-sync.js','./manifest.json',
   './piloto-documentos.js','./icons/icon-180.png','./icons/icon-192.png','./icons/icon-512.png'
