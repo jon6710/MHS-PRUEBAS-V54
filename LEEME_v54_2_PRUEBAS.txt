@@ -1,0 +1,7 @@
+MHS PILOTO v54.2 · PRUEBAS
+
+Corrección: Imprimir / PDF ahora abre una vista previa dentro de la aplicación, con botón Imprimir / Guardar PDF y Cerrar. Ya no requiere ventanas emergentes.
+Se muestran errores de preparación del documento si ocurren.
+Sin cambios en mediciones, facturación, clientes ni plantillas PDF aprobadas.
+ATENCIÓN: La vista previa utiliza el formato de impresión HTML preexistente. No equivale a rellenar automáticamente las plantillas PDF de referencia aprobadas.
+No instalar en aplicación estable. Probar primero en rama de pruebas.
