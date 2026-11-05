@@ -1,0 +1,6 @@
+MHS v54.10 — Corrección limitada a fotografía del albarán de Mobiliario.
+
+1. Añadidos en Hoja PDF / Albarán los controles para seleccionar foto del conjunto desde archivo, hacer foto con el móvil y eliminarla. Solo se muestran al seleccionar Albarán de Mobiliario.
+2. La foto del conjunto se coloca centrada y contenida dentro de la casilla FOTOGRAFÍA DEL MOBILIARIO del modelo PDF aprobado.
+3. No se modifican las plantillas originales, ni las mediciones, precios o datos existentes.
+4. Pendiente de prueba en el navegador del usuario.
