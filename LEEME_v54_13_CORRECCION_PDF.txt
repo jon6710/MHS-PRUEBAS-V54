@@ -1,0 +1,5 @@
+MHS v54.13 — SOLO CORRECCIONES VISUALES EN PDF DE MOBILIARIO
+- Hoja de servicio: no se dibuja la marca X sobre el encabezado TRATAMIENTO; únicamente se marca Desinsectación u Otros cuando esos valores existen.
+- Albarán: foto del conjunto dentro del área interior de FOTOGRAFÍA DEL MOBILIARIO.
+- Factura: columnas de conceptos, cantidades, precios, descuentos, IVA y totales ajustadas a la retícula real del modelo aprobado.
+No se han modificado los PDF originales, módulos, clientes, productos, empresa, presupuestos ni la lógica de precios o datos.

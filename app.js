@@ -674,7 +674,12 @@ function apD(s,kind,forTransport=false){
  } else if(kind==='sheet'&&type==='mobiliario'){
   add(496,57,number,70);add(474,78,date,75);add(156,161,c.name,116);add(330,161,c.taxId,93);add(488,161,c.contact,95);add(84,180,c.address,183);add(369,180,[c.postalCode,c.province].filter(Boolean).join(' / '),188);add(80,200,c.phone,164);add(320,200,c.email,240);
   const rows=apRows(s);rows.slice(0,6).forEach((row,i)=>{const y=288+i*19;add(26,y,row.concept,172);add(213,y,row.units,36);add(256,y,row.condition,50);add(311,y,row.notes,83)});
-  add(488,261,apDate(d.furnPickupDate),70);add(488,279,apDate(d.furnDeliveryDate),70);add(414,371,d.furnTreatment?'X':'',10);
+  add(488,261,apDate(d.furnPickupDate),70);add(488,279,apDate(d.furnDeliveryDate),70);
+  // Las únicas casillas del modelo son Desinsectación y Otros.
+  // No imprimir marcas genéricas encima del encabezado TRATAMIENTO.
+  const treat=String(d.furnTreatment||'').trim().toLowerCase();
+  if(treat==='desinsectación'||treat==='desinsectacion')add(416,345,'X',9,7);
+  else if(treat==='otros')add(416,369,'X',9,7);
   add(415,529,d.furnCondition||'',150);add(26,623,d.furnObs||s.notes||'',540);add(89,706,state.company?.directorName||'',180);
   // Solo en los huecos de OBSERVACIONES del modelo aprobado; no se rediseña la hoja.
   const piece=rows[0];if(piece){const m3=autoVolume(piece);const dims=[piece.length,piece.width,piece.thickness].map(x=>String(x||'').trim()).join(' × ');
@@ -716,13 +721,24 @@ function apInvoice(s,invoice=null,results=null){
   add(fields,120,189,c.name,170);add(fields,type==='autoclave'?60:54,207,c.taxId,165);add(fields,98,224,c.address,193);add(fields,108,242,c.postalCode,173);add(fields,95,259,c.province,181);
   add(fields,365,189,c.phone,200);add(fields,354,207,c.email,230);add(fields,433,224,c.contact,138);add(fields,399,242,c.paymentMethod||'',175);
   lines.slice(p*pageSize,(p+1)*pageSize).forEach((row,i)=>{
-   const y=350+i*22.5,first=p*pageSize+i;
-   add(fields,27,y,serviceDocNo(s,furniture?'MOB':'AUT')+(furniture?'-'+(first+1):''),76,7.7);
-   const description=furniture?`${row.concept||'Mueble'} (${[row.length,row.width,row.thickness].filter(x=>String(x??'').trim()).join(' × ')} m)`.replace(' ( m)',''):row.concept;
-   add(fields,105,y-4,description,174,8.2);
-   add(fields,306,y,row.quantity,45,8.4);add(fields,376,y,apMoney(row.unit),49,8.1);
-   add(fields,430,y,apMoney(row.discount),34,8);add(fields,467,y,apMoney(row.vat),36,8);
-   add(fields,516,y,apMoney(row.total),59,8.2);
+   const y=(furniture?351:347)+i*(193/9),first=p*pageSize+i; // texto dentro de cada fila, sin tocar las líneas de la plantilla
+   if(furniture){
+    // Columnas reales de MOBILIARIO_FACTURA_REFERENCIA (coordenadas A4).
+    // Ningún dato debe comenzar sobre las líneas divisorias.
+    add(fields,28,y,serviceDocNo(s,'MOB')+'-'+(first+1),69,7.5);
+    const description=`${row.concept||'Mueble'} (${[row.length,row.width,row.thickness].filter(x=>String(x??'').trim()).join(' × ')} m)`.replace(' ( m)','');
+    add(fields,105,y,description,173,8.0);
+    add(fields,285,y,row.quantity,52,8.3);add(fields,347,y,apMoney(row.unit),48,8.0);
+    add(fields,402,y,apMoney(row.discount),43,7.8);add(fields,451,y,apMoney(row.vat),40,7.8);
+    add(fields,497,y,apMoney(row.total),69,8.0);
+   }else{
+    // Autoclave se conserva sin cambios.
+    add(fields,27,y,serviceDocNo(s,'AUT'),76,7.7);
+    add(fields,105,y,row.concept,174,8.2);
+    add(fields,306,y,row.quantity,45,8.4);add(fields,376,y,apMoney(row.unit),49,8.1);
+    add(fields,430,y,apMoney(row.discount),34,8);add(fields,467,y,apMoney(row.vat),36,8);
+    add(fields,516,y,apMoney(row.total),59,8.2);
+   }
   });
   if(p===totalPages-1){
    add(fields,27,603,invoice?.notes||d.autoObs||d.furnObs||s.notes||'',256,8);
@@ -753,7 +769,7 @@ function apMedia(s,kind,transport=false){
    const rows=apRows(s);
    rows.forEach((row,i)=>{const pic=s.photos?.['furn_'+row.id];if(pic)m.push({src:pic,page:i,x:27,y:457,w:174,h:101})});
   }else if(kind==='delivery'&&s.photos?.furnGroup){
-   m.push({src:s.photos.furnGroup,page:0,x:22,y:283,w:134,h:73});
+   m.push({src:s.photos.furnGroup,page:0,x:30,y:414,w:197,h:103}); // interior del recuadro de foto del albarán; sin invadir tabla, título ni bordes
   }
  }
  if(kind==='delivery'){

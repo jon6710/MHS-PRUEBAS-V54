@@ -1,0 +1,1 @@
+v54.12 — Solo Hoja de Servicio de Mobiliario: en la copia de visualización del modelo se sustituyen las cinco opciones por Desinsectación y Otros y se centra el encabezado TRATAMIENTO. La marca se mueve a la primera casilla. No se cambian los seis PDF originales, ni el resto de módulos o cálculos.
