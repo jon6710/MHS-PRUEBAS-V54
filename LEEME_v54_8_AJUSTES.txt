@@ -1,0 +1,1 @@
+PRUEBAS v54.8 - Correcciones SOLO en Mobiliario: fotos centradas en el hueco, datos ligeramente mayores y en negrita, hoja con una página por mueble y su foto, albarán con una sola foto del conjunto (se añade captura separada) y lista de muebles, factura sin fotos. Los precios siguen manuales y los m³ no facturan. PDF originales intactos. No subir a la aplicación estable.

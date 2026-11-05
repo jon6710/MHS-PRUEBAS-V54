@@ -1,0 +1,5 @@
+v54.7 PRUEBAS - Solo integración de Mobiliario con hoja y albarán aprobados.
+Una página del mismo modelo por mueble para mostrar fotografía propia.
+Medidas, m3 y precio manual en observaciones de hoja.
+Albarán sin precios, con medidas y fotografía.
+Originales PDF intocables. NO desplegar en app estable.
