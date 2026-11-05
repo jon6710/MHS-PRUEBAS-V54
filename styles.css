@@ -51,3 +51,5 @@ body{overflow-x:hidden}.app-shell{display:grid;grid-template-columns:238px minma
 .furn-photo-area .photo-preview{height:115px}
 .furn-photo-area .photo-preview img{max-height:110px;max-width:100%;object-fit:contain}
 .furn-item .auto-measure-table{min-width:710px}
+
+.furn-photo-label{display:block;font-size:12px;margin-top:8px;color:#28583e;font-weight:700}.furn-photo-label input{display:block;margin-top:4px;font-weight:400}.furn-delete-photo{margin-top:8px}.furn-item .auto-measure-table{min-width:800px}.furn-item [data-furn="price"]{min-width:95px}

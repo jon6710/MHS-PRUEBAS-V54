@@ -1,0 +1,14 @@
+MHS PILOTO v54.6 - PRUEBAS
+Base: v54.5 de Mobiliario. NO subir a aplicación estable.
+
+Cambios solicitados exclusivamente en Mobiliario:
+- Precio manual por cada mueble, en la misma fila de medidas.
+- Suma automática de los importes manuales (importe total base).
+- El volumen solo sirve para calcular espacio del autoclave. No interviene en los precios.
+- Foto por mueble: elegir archivo, hacer foto con cámara en móviles compatibles y eliminar foto.
+- Compatibilidad con el precio manual de hojas anteriores: al abrir, se recupera como precio de la primera fila.
+- Facturación utiliza el total de los precios de las filas.
+- No se modifican los seis PDF originales ni los módulos de otros servicios.
+
+ANTES DE SUBIR: guardar respaldo de código y copia JSON de los datos.
+PENDIENTE DE PRUEBA EN MAC / MÓVIL: guardar/reabrir precios y fotos, cámara, borrado de foto, factura y PDF.

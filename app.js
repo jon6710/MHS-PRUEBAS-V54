@@ -205,39 +205,68 @@ function collectDDD(s){commonCollect(s);const d=s.data=s.data||{};['dddType','dd
 
 // Mobiliario: medidas para capacidad del autoclave, NUNCA para calcular el precio.
 // Cada pieza conserva sus propias medidas y una fotografía independiente.
+function furnLegacyPrice(d){
+ const n=num(d.furnUnitPrice);if(!Number.isFinite(n))return '';
+ const q=num(d.furnQty);
+ return String(d.furnBillMode==='Por unidades'&&Number.isFinite(q)?Math.round(n*q*100)/100:n);
+}
 function furnRows(d){
- if(Array.isArray(d.furnItems))return d.furnItems.map(x=>({id:x.id||uid(),concept:String(x.concept??''),units:String(x.units??''),length:String(x.length??''),width:String(x.width??''),thickness:String(x.thickness??'')}));
- if(d.furnDesc||d.furnQty)return [{id:uid(),concept:String(d.furnDesc||''),units:String(d.furnQty||''),length:'',width:'',thickness:''}];
+ if(Array.isArray(d.furnItems)){
+  const rows=d.furnItems.map(x=>({id:x.id||uid(),concept:String(x.concept??''),units:String(x.units??''),length:String(x.length??''),width:String(x.width??''),thickness:String(x.thickness??''),price:String(x.price??'')}));
+  // Una hoja antigua con precio general conserva el importe en su primer mueble.
+  if(rows.length&&!rows.some(r=>r.price.trim())&&d.furnUnitPrice!==undefined&&d.furnUnitPrice!=='')rows[0].price=furnLegacyPrice(d);
+  return rows;
+ }
+ if(d.furnDesc||d.furnQty||d.furnUnitPrice)return [{id:uid(),concept:String(d.furnDesc||''),units:String(d.furnQty||''),length:'',width:'',thickness:'',price:furnLegacyPrice(d)}];
  return [];
 }
-let furnPhotoDraft={};
-function furnRowHTML(r={},s){
- const id=r.id||uid(),keys=['concept','units','length','width','thickness'],labels=['Concepto','Unidades','Largo (m)','Ancho (m)','Grosor (m)'];
- const src=s.photos?.['furn_'+id];
- return `<div class="furn-item" data-furn-id="${esc(id)}"><div class="auto-table-scroll"><table class="auto-measure-table"><thead><tr>${labels.map(v=>`<th>${v}</th>`).join('')}<th>Volumen (m³)</th></tr></thead><tbody><tr>${keys.map((k,i)=>`<td><input type="text" data-furn="${k}" aria-label="${labels[i]}" value="${esc(r[k]??'')}" ${i?'inputmode="decimal"':''} autocomplete="off"></td>`).join('')}<td class="furn-volume">—</td></tr></tbody></table></div><div class="furn-photo-area"><div class="photo-box"><h4>Fotografía de este mueble</h4><div class="photo-preview furn-photo-preview">${src?`<img src="${src}" alt="Fotografía de ${esc(r.concept||'mueble')}">`:'Sin foto'}</div><input type="file" accept="image/*" data-furn-photo aria-label="Fotografía de este mueble"></div><button type="button" class="btn secondary furn-remove">Eliminar mueble</button></div></div>`;
+function furnMoneyBase(d){
+ if(Array.isArray(d?.furnItems))return Math.round(d.furnItems.reduce((sum,r)=>{const p=num(r.price);return sum+(Number.isFinite(p)&&p>=0?p:0)},0)*100)/100;
+ const p=num(d?.furnUnitPrice),q=num(d?.furnQty);
+ return Number.isFinite(p)?(d.furnBillMode==='Por unidades'&&Number.isFinite(q)?p*q:p):0;
 }
-function furnUIRows(){return [...document.querySelectorAll('.furn-item')].map(el=>({id:el.dataset.furnId,...Object.fromEntries(['concept','units','length','width','thickness'].map(k=>[k,el.querySelector(`[data-furn="${k}"]`).value]))})).filter(r=>['concept','units','length','width','thickness'].some(k=>r[k].trim()));}
+function furnRowHTML(r={},s){
+ const id=r.id||uid(),keys=['concept','units','length','width','thickness','price'],labels=['Concepto','Unidades','Largo (m)','Ancho (m)','Grosor (m)','Precio manual (€)'];
+ const src=s.photos?.['furn_'+id];
+ return `<div class="furn-item" data-furn-id="${esc(id)}"><div class="auto-table-scroll"><table class="auto-measure-table"><thead><tr>${labels.slice(0,5).map(v=>`<th>${v}</th>`).join('')}<th>Volumen (m³)</th><th>${labels[5]}</th></tr></thead><tbody><tr>${keys.slice(0,5).map((k,i)=>`<td><input type="text" data-furn="${k}" aria-label="${labels[i]}" value="${esc(r[k]??'')}" ${i?'inputmode="decimal"':''} autocomplete="off"></td>`).join('')}<td class="furn-volume">—</td><td><input type="text" data-furn="price" aria-label="Precio manual del mueble en euros" inputmode="decimal" value="${esc(r.price||'')}" autocomplete="off"></td></tr></tbody></table></div><div class="furn-photo-area"><div class="photo-box"><h4>Fotografía de este mueble</h4><div class="photo-preview furn-photo-preview">${src?`<img src="${src}" alt="Fotografía de ${esc(r.concept||'mueble')}">`:'Sin foto'}</div><label class="furn-photo-label">Elegir foto <input type="file" accept="image/*" data-furn-photo aria-label="Seleccionar fotografía de este mueble"></label><label class="furn-photo-label">Hacer foto con el móvil <input type="file" accept="image/*" capture="environment" data-furn-photo aria-label="Hacer fotografía de este mueble"></label><button type="button" class="btn secondary furn-delete-photo" ${src?'':'disabled'}>Eliminar foto</button></div><button type="button" class="btn secondary furn-remove">Eliminar mueble</button></div></div>`;
+}
+function furnUIRows(){return [...document.querySelectorAll('.furn-item')].map(el=>({id:el.dataset.furnId,...Object.fromEntries(['concept','units','length','width','thickness','price'].map(k=>[k,el.querySelector(`[data-furn="${k}"]`).value]))})).filter(r=>['concept','units','length','width','thickness','price'].some(k=>r[k].trim()));}
 function furnUpdate(){
- const rows=furnUIRows();let all=[],invalid=false;
+ let all=[],invalid=false,prices=0,priceInvalid=false;
  document.querySelectorAll('.furn-item').forEach(el=>{
-  const r={};['concept','units','length','width','thickness'].forEach(k=>r[k]=el.querySelector(`[data-furn="${k}"]`).value);
-  const isActive=Object.values(r).some(v=>String(v).trim());const volume=isActive?autoVolume(r):null;
+  const r={};['concept','units','length','width','thickness','price'].forEach(k=>r[k]=el.querySelector(`[data-furn="${k}"]`).value);
+  const isActive=['concept','units','length','width','thickness'].some(k=>String(r[k]).trim());const volume=isActive?autoVolume(r):null;
   if(isActive&&!volume)invalid=true;
   if(volume)all.push(volume);
+  const p=num(r.price);if(r.price.trim()&&(!Number.isFinite(p)||p<0))priceInvalid=true;
+  if(Number.isFinite(p)&&p>=0)prices+=p;
   el.querySelector('.furn-volume').textContent=volume?autoFour(volume).replace('.',','):'—';
  });
  const sum=autoFour(autoSum(all)).replace('.',',');
  $('#furnTotal').textContent=sum;
  $('#furnInvalid').hidden=!invalid;
  $('#furnVolumeNotice').textContent='Volumen para planificar el espacio en el autoclave: '+sum+' m³. No interviene en el precio.';
+ if($('#furnPriceTotal'))$('#furnPriceTotal').textContent=money(Math.round(prices*100)/100);
+ if($('#furnPriceInvalid'))$('#furnPriceInvalid').hidden=!priceInvalid;
 }
 function renderMobiliario(s){
  const d=s.data||{},items=furnRows(d);const current=items.length?items:[{id:uid()}];
- app.innerHTML=toolbar(s,{transport:true})+`<div class="sheet">${commonHeader(s,'Mobiliario')}<div class="sheet-body">${commonSection(s)}<section class="section"><h3>2. Muebles y espacio necesario en autoclave</h3><div class="inner"><div id="furnItemsBody">${current.map(r=>furnRowHTML(r,s)).join('')}</div><div class="auto-measure-actions"><button type="button" class="btn secondary" id="furnAdd">+ Añadir mueble</button><small>Un apartado de medidas y una fotografía por mueble.</small></div><div class="notice"><b>Volumen total: <span id="furnTotal">0,0000</span> m³</b><div id="furnVolumeNotice"></div></div><div class="notice warn" id="furnInvalid" hidden>Hay medidas incompletas o no válidas: comprueba unidades enteras y dimensiones positivas.</div><div class="grid">${select('furnTreatment','Tratamiento realizado',['AUTOCLAVE','INSITU GEL'],['AUTOCLAVE','INSITU GEL'].includes(d.furnTreatment)?d.furnTreatment:'AUTOCLAVE')}${textarea('furnObs','Observaciones',d.furnObs||'')}</div></div></section><section class="section"><h3>Aviso sobre mobiliario barnizado y acabados</h3><div class="inner"><div class="notice warn"><b>Importante:</b> En piezas barnizadas, lacadas o con otros acabados superficiales, el producto de tratamiento penetrará principalmente a través de los orificios existentes producidos por la plaga y por las zonas de madera sin barnizar o sin recubrimiento. Debido a las condiciones propias del tratamiento en autoclave, no se puede garantizar la conservación del estado original de barnices, lacas, pinturas u otros acabados superficiales tras el proceso.</div></div></section>${(s.photos?.before||s.photos?.after)?`<section class="section"><h3>Fotos conservadas de la hoja anterior</h3><div class="inner"><div class="photos">${photoBox('photoBefore','Foto ANTES',s.photos.before)}${photoBox('photoAfter','Foto DESPUÉS',s.photos.after)}</div></div></section>`:''}${recoveredAttachmentsSection(s)}<section class="section"><h3>4. Facturación Mobiliario</h3><div class="inner"><div class="notice"><b>El importe lo introduces tú.</b> Los m³ no afectan a la facturación.</div><div class="grid">${field('furnUnitPrice','Importe base manual (€)',d.furnBillMode==='Por unidades'?((num(d.furnQty)||0)*(num(d.furnUnitPrice)||0)).toString():d.furnUnitPrice||'','text','inputmode="decimal"')}${field('furnBudgetRef','Referencia presupuesto',d.furnBudgetRef||'')}</div></div></section></div></div>`;
+ app.innerHTML=toolbar(s,{transport:true})+`<div class="sheet">${commonHeader(s,'Mobiliario')}<div class="sheet-body">${commonSection(s)}<section class="section"><h3>2. Muebles y espacio necesario en autoclave</h3><div class="inner"><div id="furnItemsBody">${current.map(r=>furnRowHTML(r,s)).join('')}</div><div class="auto-measure-actions"><button type="button" class="btn secondary" id="furnAdd">+ Añadir mueble</button><small>Un apartado de medidas y una fotografía por mueble.</small></div><div class="notice"><b>Volumen total: <span id="furnTotal">0,0000</span> m³</b><div id="furnVolumeNotice"></div></div><div class="notice" style="margin-top:9px"><b>Precio total de los muebles: <span id="furnPriceTotal">0,00 €</span></b><div>Precios introducidos a mano por mueble; no se calculan por m³ ni se multiplican automáticamente por unidades.</div></div><div class="notice warn" id="furnPriceInvalid" hidden>Comprueba los precios: deben ser importes positivos o cero.</div><div class="notice warn" id="furnInvalid" hidden>Hay medidas incompletas o no válidas: comprueba unidades enteras y dimensiones positivas.</div><div class="grid">${select('furnTreatment','Tratamiento realizado',['AUTOCLAVE','INSITU GEL'],['AUTOCLAVE','INSITU GEL'].includes(d.furnTreatment)?d.furnTreatment:'AUTOCLAVE')}${textarea('furnObs','Observaciones',d.furnObs||'')}</div></div></section><section class="section"><h3>Aviso sobre mobiliario barnizado y acabados</h3><div class="inner"><div class="notice warn"><b>Importante:</b> En piezas barnizadas, lacadas o con otros acabados superficiales, el producto de tratamiento penetrará principalmente a través de los orificios existentes producidos por la plaga y por las zonas de madera sin barnizar o sin recubrimiento. Debido a las condiciones propias del tratamiento en autoclave, no se puede garantizar la conservación del estado original de barnices, lacas, pinturas u otros acabados superficiales tras el proceso.</div></div></section>${(s.photos?.before||s.photos?.after)?`<section class="section"><h3>Fotos conservadas de la hoja anterior</h3><div class="inner"><div class="photos">${photoBox('photoBefore','Foto ANTES',s.photos.before)}${photoBox('photoAfter','Foto DESPUÉS',s.photos.after)}</div></div></section>`:''}${recoveredAttachmentsSection(s)}<section class="section"><h3>4. Facturación Mobiliario</h3><div class="inner"><div class="notice"><b>El precio se introduce en cada fila de mueble y se suma automáticamente.</b> Los m³ no afectan a la facturación.</div><div class="grid">${field('furnBudgetRef','Referencia presupuesto',d.furnBudgetRef||'')}</div></div></section></div></div>`;
  bindCommon(s,collectMobiliario,{transport:true});
  $('#furnAdd').onclick=()=>{$('#furnItemsBody').insertAdjacentHTML('beforeend',furnRowHTML({id:uid()},s));furnUpdate()};
  $('#furnItemsBody').addEventListener('input',e=>{if(e.target.matches('[data-furn]'))furnUpdate()});
- $('#furnItemsBody').addEventListener('click',e=>{if(!e.target.closest('.furn-remove'))return;if(!confirm('¿Eliminar este mueble de la hoja?'))return;e.target.closest('.furn-item').remove();furnUpdate()});
+ $('#furnItemsBody').addEventListener('click',e=>{
+  const delPhoto=e.target.closest('.furn-delete-photo');
+  if(delPhoto){const el=delPhoto.closest('.furn-item'),key='furn_'+el.dataset.furnId;
+   if(!confirm('¿Eliminar la fotografía de este mueble?'))return;
+   s.photos=s.photos||{};delete s.photos[key];el.querySelector('.furn-photo-preview').textContent='Sin foto';
+   el.querySelectorAll('[data-furn-photo]').forEach(input=>input.value='');delPhoto.disabled=true;
+   collectMobiliario(s);save();toast('Fotografía eliminada');return;
+  }
+  if(!e.target.closest('.furn-remove'))return;
+  if(!confirm('¿Eliminar este mueble de la hoja?'))return;
+  const el=e.target.closest('.furn-item');if(s.photos)delete s.photos['furn_'+el.dataset.furnId];el.remove();furnUpdate();
+ });
  $('#furnItemsBody').addEventListener('change',async e=>{
   if(!e.target.matches('[data-furn-photo]'))return;
   const input=e.target,file=input.files?.[0];if(!file)return;
@@ -249,7 +278,7 @@ function renderMobiliario(s){
     const blob=await(await fetch(data)).blob();const blobId=await MHSOffline.storeBlob(blob,{name:`${s.id}-furn-${id}.jpg`,type:'image/jpeg',serviceId:s.id,photoKey:'furn_'+id});
     await MHSOffline.enqueue('photo',{serviceId:s.id,key:'furn_'+id,name:`${s.id}-furn-${id}.jpg`,type:'image/jpeg'},{dedupeKey:`photo-${s.id}-furn-${id}`,blobId});
    }
-   el.querySelector('.furn-photo-preview').innerHTML=`<img src="${data}" alt="Fotografía del mueble">`;
+   el.querySelector('.furn-photo-preview').innerHTML=`<img src="${data}" alt="Fotografía del mueble">`;el.querySelector('.furn-delete-photo').disabled=false;
    toast('Fotografía del mueble guardada');
   }catch(err){alert('No se pudo guardar la fotografía: '+(err?.message||err))}
  });
@@ -259,12 +288,13 @@ function renderMobiliario(s){
 }
 function collectMobiliario(s){
  commonCollect(s);const d=s.data=s.data||{};
- ['furnTreatment','furnObs','furnUnitPrice','furnBudgetRef'].forEach(k=>{const e=$('#'+k);if(e)d[k]=e.value});
+ ['furnTreatment','furnObs','furnBudgetRef'].forEach(k=>{const e=$('#'+k);if(e)d[k]=e.value});
  d.furnItems=furnUIRows();
  d.furnVolumeM3=autoFour(autoSum(d.furnItems.map(autoVolume).filter(Boolean)));
  // Campos históricos para certificados y albaranes; NO se usan para calcular precios.
  d.furnQty=String(d.furnItems.reduce((sum,r)=>sum+(Number.isInteger(num(r.units))&&num(r.units)>0?num(r.units):0),0));
  d.furnDesc=d.furnItems.map(r=>r.concept.trim()).filter(Boolean).join(', ');
+ d.furnUnitPrice=String(furnMoneyBase(d)); // Compatibilidad con facturación y plantillas existentes.
  d.furnBillMode='Importe manual';
 }
 
@@ -290,7 +320,7 @@ function setupDeliverySignature(s){const t=s.data.transport=s.data.transport||{}
 function saveTransport(s,requireSignature=false){const t=s.data.transport=s.data.transport||{},canvas=$('#deliverySignature');t.number=$('#trNo').value;t.date=$('#trDate').value;t.destination=$('#trDestination').value;t.company=$('#trCompany').value;t.driver=$('#trDriver').value;t.plate=$('#trPlate').value;t.trailer=$('#trTrailer').value;t.packages=$('#trPackages').value;t.deliveryDescription=$('#trM3').value;t.notes=$('#trNotes').value;t.receiver=$('#trReceiver').value.trim();t.receiverRole=$('#trReceiverRole').value.trim();t.signDate=$('#trSignDate').value.trim();if(canvas?._mhsHasInk?.())t.signature=canvas._mhsData();if(requireSignature&&(!t.receiver||!t.signDate||!t.signature)){alert('Para guardar o imprimir cualquier albarán es obligatorio indicar quién recibe, la fecha/hora y su firma.');return false}s.updatedAt=new Date().toISOString();save();return true}
 function printTransport(s){const t=s.data.transport||{},qty=s.type==='autoclave'?`${fmt4(trunc4(num(s.data.checkedM3)))} m³`:esc(t.deliveryDescription||'');if(!t.receiver||!t.signDate||!t.signature){alert('El albarán necesita firma de recepción antes de imprimir.');return}printDoc('ALBARÁN DE ENTREGA',`<h2>${esc(typeMeta[s.type].name)}</h2><p><b>Albarán:</b> ${esc(t.number||'')} · <b>Fecha:</b> ${esc(t.date||'')}</p><p><b>Cliente:</b> ${esc(s.client.name)}<br><b>Destino:</b> ${esc(t.destination||'')}</p><p><b>Transportista:</b> ${esc(t.company||'')} · <b>Conductor:</b> ${esc(t.driver||'')} · <b>Matrícula:</b> ${esc(t.plate||'')}</p><div class="big">Entrega: ${qty}</div><p><b>Observaciones:</b><br>${esc(t.notes||'')}</p><p><b>Recibido por:</b> ${esc(t.receiver)} ${t.receiverRole?`· ${esc(t.receiverRole)}`:''}<br><b>Fecha/hora:</b> ${esc(t.signDate)}</p><p><img src="${t.signature}" alt="Firma recepción" style="max-width:320px;max-height:130px;border-bottom:1px solid #777"></p>${companyValidationHtml()}<div class="sign"><span>Firma / recepción</span><span>Firma empresa</span></div>`)}
 
-function openBilling(s){if(s.type==='madera'){const r=calcMaderaSafe(s);return printBillingPreview(s,r)}if(s.type==='autoclave'){const q=trunc4(num(s.data.checkedM3)),p=num(s.data.autoPriceM3),base=Number.isFinite(q)&&Number.isFinite(p)?q*p:0;return printBillingPreview(s,{base,iva:base*.21,total:base*1.21,concept:`Tratamiento Autoclave · ${fmt4(q)} m³ × ${Number.isFinite(p)?money(p):'—'}`})}if(s.type==='ddd'){const base=num(s.data.dddBillAmount)||0;return printBillingPreview(s,{base,iva:base*.21,total:base*1.21,concept:`Servicio DDD · ${s.data.dddBillRef||'importe manual'}`})}if(s.type==='mobiliario'){const qty=num(s.data.furnQty)||0,price=num(s.data.furnUnitPrice)||0,base=s.data.furnBillMode==='Por unidades'?qty*price:price;return printBillingPreview(s,{base,iva:base*.21,total:base*1.21,concept:`Mobiliario · ${s.data.furnBillMode||''}`})}if(s.type==='termitas'){return printTermiteBilling(s)}}
+function openBilling(s){if(s.type==='madera'){const r=calcMaderaSafe(s);return printBillingPreview(s,r)}if(s.type==='autoclave'){const q=trunc4(num(s.data.checkedM3)),p=num(s.data.autoPriceM3),base=Number.isFinite(q)&&Number.isFinite(p)?q*p:0;return printBillingPreview(s,{base,iva:base*.21,total:base*1.21,concept:`Tratamiento Autoclave · ${fmt4(q)} m³ × ${Number.isFinite(p)?money(p):'—'}`})}if(s.type==='ddd'){const base=num(s.data.dddBillAmount)||0;return printBillingPreview(s,{base,iva:base*.21,total:base*1.21,concept:`Servicio DDD · ${s.data.dddBillRef||'importe manual'}`})}if(s.type==='mobiliario'){const base=furnMoneyBase(s.data||{});return printBillingPreview(s,{base,iva:base*.21,total:base*1.21,concept:`Mobiliario · ${s.data.furnBillMode||''}`})}if(s.type==='termitas'){return printTermiteBilling(s)}}
 
 function printTermiteBilling(s){const d=s.data||{},sch=termiteSchedule({data:{...d,installationDate:d.termiteInstallationDate,contactDate:d.termiteContactDate}});if(sch.custom){return printDoc('PLAN DE FACTURACIÓN · TERMITAS',`<div class=\"draft\">BORRADOR</div><h2>${esc(s.client.name||'')}</h2><p><b>Plan personalizado</b><br>Presupuesto base: ${money(sch.base)} · IVA: ${money(sch.vat)} · Total: ${money(sch.total)}</p><p class=\"note\">${esc(d.termiteCustomBilling||'Sin calendario personalizado informado.')}</p>`)}const rows=sch.rows.map(r=>`<tr><td>${esc(r.concept)}</td><td>${esc(dateLabel(r.date))}</td><td>${r.pct.toLocaleString('es-ES',{maximumFractionDigits:2})}%</td><td>${money(r.amount)}</td><td>${esc(r.status)}</td></tr>`).join('');printDoc('PLAN DE FACTURACIÓN · TERMITAS',`<div class=\"draft\">BORRADOR</div><h2>${esc(s.client.name||'')}</h2><p><b>Expediente:</b> ${esc(s.number||'')} · <b>Instalación:</b> ${esc(dateLabel(d.termiteInstallationDate))}</p><table><tr><th>Hito</th><th>Fecha</th><th>%</th><th>Base</th><th>Estado</th></tr>${rows}</table><div class=\"tot\"><p>Base: <b>${money(sch.base)}</b></p><p>IVA: <b>${money(sch.vat)}</b></p><p>Total: <b>${money(sch.total)}</b></p></div><p class=\"note\">Plan particular: 60 % diseño/instalación, 25 % en el contacto real con la colonia y 15 % restante repartido en cuotas anuales pendientes hasta el 3.er aniversario.</p>`)}
 function calcMaderaSafe(s){const d=s.data||{},mode=d.billMode||'m2',area=num(d.woodArea),pm=num(d.billPriceM2),other=num(d.billOther)||0,bud=num(d.billBudgetAmount),pack=num(d.billPackAmount)||0,vat=num(d.billVat)||21;let base=0,concept='';if(mode==='m2'){base=(Number.isFinite(area)&&Number.isFinite(pm)?area*pm:0)+other;concept=`Aplicación de gel · ${area||0} m²`}if(mode==='presupuesto'){base=Number.isFinite(bud)?bud:0;concept=`Según presupuesto ${d.billBudgetRef||''}`}if(mode==='pack'){base=pack;concept='Pack Presupuesto'}if(mode==='combinada'){base=(Number.isFinite(area)&&Number.isFinite(pm)?area*pm:0)+pack+other;concept='Facturación combinada'}const iva=base*vat/100;return{base,iva,total:base+iva,concept,packNote:['pack','combinada'].includes(mode)}}
@@ -622,13 +652,13 @@ function apD(s,kind,forTransport=false){
 }
 function apInvoice(s,invoice=null,results=null){
  const d=s.data||{},type=s.type,c=(invoice?.clientId?(state.clients||[]).find(x=>x.id===invoice.clientId):null)||apClient(s),r=results||{},fields=[],add=(x,y,v,w=120,z=7)=>fields.push([x,y,v,w,z]);
- const base=invoice?Number(invoice.base)||0:(Number(r.base)||((type==='autoclave'?num(d.checkedM3)*num(d.autoPriceM3):num(d.furnUnitPrice))||0));
+ const base=invoice?Number(invoice.base)||0:(Number(r.base)||((type==='autoclave'?num(d.checkedM3)*num(d.autoPriceM3):furnMoneyBase(d))||0));
  const vatPct=invoice?Number(invoice.vat)||0:21,total=base*(1+vatPct/100);const invNo=invoice?.number||serviceDocNo(s,'FRA'),date=apDate(invoice?.date||s.date);
  add(type==='autoclave'?495:460,type==='autoclave'?74:74,invNo,111);add(type==='autoclave'?499:468,type==='autoclave'?99:97,date,90);
  add(120,189,c.name,170);add(type==='autoclave'?60:54,207,c.taxId,165);add(98,224,c.address,193);add(108,242,c.postalCode,173);add(95,259,c.province,181);
  add(365,189,c.phone,200);add(354,207,c.email,230);add(433,224,c.contact,138);add(399,242,c.paymentMethod||'',175);
  const qty=type==='autoclave'?ap4(d.checkedM3):'1';
- const qtyNumber=num(qty),storedPrice=type==='autoclave'?num(d.autoPriceM3):num(d.furnUnitPrice);
+ const qtyNumber=num(qty),storedPrice=type==='autoclave'?num(d.autoPriceM3):furnMoneyBase(d);
  const price=(invoice&&Number.isFinite(qtyNumber)&&qtyNumber>0)?base/qtyNumber:(Number.isFinite(storedPrice)?storedPrice:0);
  add(27,350,serviceDocNo(s,type==='autoclave'?'AUT':'MOB'),74,6.7);add(105,346,invoice?.concept||r.concept||(type==='autoclave'?'Tratamiento en autoclave':d.furnDesc||'Tratamiento de mobiliario'),175,6.7);
  add(306,350,qty,48,6.7);add(376,350,apMoney(price),53,6.7);add(430,350,'0,00',30,6.7);add(467,350,apMoney(vatPct),36,6.7);add(515,350,apMoney(base),58,6.7);
