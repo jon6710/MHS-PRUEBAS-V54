@@ -43,3 +43,11 @@ body{overflow-x:hidden}.app-shell{display:grid;grid-template-columns:238px minma
 .auto-measure-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px}
 .auto-measure-actions small{color:var(--muted)}
 #autoLegacyNotice{margin:10px 0}
+
+/* Solo Mobiliario: bloque de medidas con una fotografía por mueble. */
+.furn-item{border:1px solid #c8d9cf;border-radius:10px;padding:12px;margin-bottom:14px;background:#fff}
+.furn-photo-area{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:10px;flex-wrap:wrap}
+.furn-photo-area .photo-box{max-width:280px;flex:1 1 220px}
+.furn-photo-area .photo-preview{height:115px}
+.furn-photo-area .photo-preview img{max-height:110px;max-width:100%;object-fit:contain}
+.furn-item .auto-measure-table{min-width:710px}

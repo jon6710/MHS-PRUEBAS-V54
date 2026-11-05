@@ -1,0 +1,10 @@
+v54.5 CORREGIDA — SOLO PRUEBAS
+
+BASE: v54.4 con seis modelos aprobados conservados sin modificar.
+CAMBIO SOLICITADO: Mobiliario tiene varios muebles, con concepto, unidades, largo, ancho, grosor, cálculo de volumen a cuatro decimales sin redondear, y una foto independiente por mueble.
+USO DEL VOLUMEN: exclusivamente espacio necesario en el autoclave.
+FACTURACIÓN: importe manual independiente de los m³.
+DATOS: mismo identificador de almacenamiento que v54.4; compatibilidad con hojas antiguas. Fotos antiguas se conservan.
+DOCUMENTOS: los seis diseños originales no se tocan; la colocación definitiva de medidas/fotos individuales en PDF deberá cuadrarse con el usuario durante la siguiente revisión.
+NO cambia los módulos in situ, DDD ni Termitas. NO instalar en aplicación estable.
+Antes de actualizar el repositorio de pruebas, exportar copia JSON de datos y conservar respaldo de rama.
