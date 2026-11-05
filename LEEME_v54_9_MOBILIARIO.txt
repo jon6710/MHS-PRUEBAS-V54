@@ -1,0 +1,17 @@
+MHS PILOTO v54.9 - PRUEBAS Mobiliario
+
+Punto de partida: v54.8. ÚNICAMENTE correcciones de Mobiliario y su impresión.
+
+- Hoja de Servicio: una página por mueble con fotografía asociada, volumen truncado a cuatro decimales y precio unitario manual visible. No se altera el PDF original.
+- Albarán: relación de muebles y fotografía independiente del conjunto (si se ha añadido desde la sección Mobiliario); sin precios.
+- Factura: concepto (con medidas), cantidad, precio unitario manual, descuento %, IVA % y total por línea. Totales automáticos. Sin fotografías. Páginas adicionales si no caben las líneas.
+- Forma de pago: IBAN únicamente si hay forma de pago no al contado; se muestran solo los cuatro últimos caracteres.
+- Fotografías: centradas, sin deformarse dentro de su casilla, con datos en negrita y tamaño mayor sujeto al espacio disponible.
+- Compatibilidad: los importes manuales guardados en versiones previas como TOTAL POR FILA se convierten a PRECIO POR UNIDAD al abrir, sin variar la base total anterior si la cantidad es válida y no hay descuento. Las modificaciones se guardan en la misma hoja, no se importan ni borran automáticamente datos.
+- Volumen m³: planificación del espacio en autoclave; no se utiliza para el cálculo del precio.
+
+Los 6 PDF originales (plantillas-aprobadas) y los 6 fondos derivados (approved-backgrounds) se conservan byte a byte.
+La aplicación estable y GitHub no se modifican desde este paquete.
+
+Pruebas internas: sintaxis JavaScript, fórmulas unitarias, dos líneas con descuentos e IVA, impresión visual en navegador simulado, asociación de fotografía al mueble y fotografía del conjunto al albarán, así como integridad de las plantillas.
+Validación final con los datos reales del usuario y en su dispositivo: PENDIENTE.
