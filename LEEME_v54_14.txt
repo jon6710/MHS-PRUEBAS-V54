@@ -1,0 +1,1 @@
+v54.14 - SOLO correcciones de posicionamiento de campos PDF Mobiliario: alineación vertical estricta de filas de factura y separación de etiquetas en albarán. Foto delimitada a su casilla. Plantillas originales y demás módulos intactos. Requiere prueba final en Mac.

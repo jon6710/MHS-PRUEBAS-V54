@@ -1,0 +1,1 @@
+v54.15 — ÚNICAMENTE centrado de los valores de descuento (% Dto.) e IVA (% IVA) dentro de sus casillas en la factura de Mobiliario. Sin cambios en cálculos, plantillas, datos o demás módulos.

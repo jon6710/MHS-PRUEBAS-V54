@@ -693,9 +693,14 @@ function apD(s,kind,forTransport=false){
   add(275,375,'Tratamiento de madera en autoclave',270);add(323,389,d.autoStartTime||'',80);add(519,389,d.autoEndTime||'',55);add(311,406,d.autoProduct||'',165);add(333,422,d.autoUseClass||'',160);add(234,473,d.autoObs||s.notes||r.notes||'',330);
   add(118,548,t.company||r.carrier||'',180);add(106,566,t.plate||r.plate||'',135);add(348,566,t.driver||r.receiver||'',165);add(53,583,t.driverId||'',115);
  } else if(kind==='delivery'&&type==='mobiliario'){
-  add(467,86,number,108);add(496,99,date,75);add(147,159,c.name,189);add(403,159,c.address,174);add(80,179,c.phone,118);add(242,179,c.email,168);add(461,179,c.contact,114);
+  add(467,86,number,108);add(496,99,date,75);add(147,159,c.name,189);add(403,159,c.address,174);add(80,179,c.phone,118);add(254,179,c.email,154);add(473,179,c.contact,99);
   apRows(s).slice(0,7).forEach((v,i)=>{const y=256+i*17.3;add(27,y,v.concept,220);add(270,y,v.units,55);add(331,y,v.condition,50);add(389,y,v.notes,183)});
-  add(303,392,'Tratamiento de mobiliario',250);add(354,408,apDate(d.furnPickupDate),100);add(404,423,apDate(d.furnDeliveryDate),100);add(330,439,d.furnTreatment,180);add(264,489,d.furnObs||s.notes||r.notes||'',298);
+  // Los valores comienzan después de las etiquetas impresas en el modelo aprobado.
+  add(333,392,'Tratamiento de mobiliario',217,7.0);
+  add(365,408,apDate(d.furnPickupDate),175,7.2);
+  add(406,423,apDate(d.furnDeliveryDate),132,7.2);
+  add(335,439,d.furnTreatment,208,7.2);
+  add(264,489,d.furnObs||s.notes||r.notes||'',298,7.2);
   // Albarán: conjunto de muebles, sin precios; los m³ son únicamente información logística.
   const volume=autoSum(apRows(s).map(autoVolume).filter(Boolean));
   add(264,507,'Volumen de los muebles de esta página: '+autoFour(volume).replace('.',',')+' m³',295,7.1);
@@ -721,16 +726,22 @@ function apInvoice(s,invoice=null,results=null){
   add(fields,120,189,c.name,170);add(fields,type==='autoclave'?60:54,207,c.taxId,165);add(fields,98,224,c.address,193);add(fields,108,242,c.postalCode,173);add(fields,95,259,c.province,181);
   add(fields,365,189,c.phone,200);add(fields,354,207,c.email,230);add(fields,433,224,c.contact,138);add(fields,399,242,c.paymentMethod||'',175);
   lines.slice(p*pageSize,(p+1)*pageSize).forEach((row,i)=>{
-   const y=(furniture?351:347)+i*(193/9),first=p*pageSize+i; // texto dentro de cada fila, sin tocar las líneas de la plantilla
+   const y=(furniture?342.75:347)+i*(193/9),first=p*pageSize+i;
    if(furniture){
-    // Columnas reales de MOBILIARIO_FACTURA_REFERENCIA (coordenadas A4).
-    // Ningún dato debe comenzar sobre las líneas divisorias.
-    add(fields,28,y,serviceDocNo(s,'MOB')+'-'+(first+1),69,7.5);
+    // A4: las líneas horizontales de la tabla están a 342,4, 364,0, 385,4... pt.
+    // Todas las celdas de una misma fila usan EXACTAMENTE la misma caja vertical.
+    const center='display:flex;align-items:center;height:2.42%;line-height:1.05;';
+    const cell=(x,v,w,z)=>fields.push([x,y,v,w,z,center]);
+    cell(28,serviceDocNo(s,'MOB')+'-'+(first+1),69,7.5);
     const description=`${row.concept||'Mueble'} (${[row.length,row.width,row.thickness].filter(x=>String(x??'').trim()).join(' × ')} m)`.replace(' ( m)','');
-    add(fields,105,y,description,173,8.0);
-    add(fields,285,y,row.quantity,52,8.3);add(fields,347,y,apMoney(row.unit),48,8.0);
-    add(fields,402,y,apMoney(row.discount),43,7.8);add(fields,451,y,apMoney(row.vat),40,7.8);
-    add(fields,497,y,apMoney(row.total),69,8.0);
+    cell(105,description,173,8.0);
+    cell(285,row.quantity,52,8.3);cell(347,apMoney(row.unit),48,8.0);
+    // Descuento e IVA: centrar valores DENTRO de sus columnas, con margen a ambos bordes.
+    // Los límites de la plantilla son x=401..451 pt (Dto.) y x=451..494 pt (IVA).
+    const numericCenter='display:flex;align-items:center;justify-content:center;text-align:center;height:2.42%;line-height:1.05;';
+    fields.push([405,y,apMoney(row.discount),42,7.8,numericCenter]);
+    fields.push([454,y,apMoney(row.vat),36,7.8,numericCenter]);
+    cell(497,apMoney(row.total),69,8.0);
    }else{
     // Autoclave se conserva sin cambios.
     add(fields,27,y,serviceDocNo(s,'AUT'),76,7.7);
@@ -769,7 +780,7 @@ function apMedia(s,kind,transport=false){
    const rows=apRows(s);
    rows.forEach((row,i)=>{const pic=s.photos?.['furn_'+row.id];if(pic)m.push({src:pic,page:i,x:27,y:457,w:174,h:101})});
   }else if(kind==='delivery'&&s.photos?.furnGroup){
-   m.push({src:s.photos.furnGroup,page:0,x:30,y:414,w:197,h:103}); // interior del recuadro de foto del albarán; sin invadir tabla, título ni bordes
+   m.push({src:s.photos.furnGroup,page:0,x:31,y:414,w:195,h:103}); // casilla interior de FOTOGRAFÍA DEL MOBILIARIO
   }
  }
  if(kind==='delivery'){
